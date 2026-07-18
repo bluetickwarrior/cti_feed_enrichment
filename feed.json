@@ -1,0 +1,13 @@
+{
+  "updated_at": "2026-07-19T12:00:00Z",
+  "items": [
+    {
+      "id": "test-item-001",
+      "title": "Test vulnerability article",
+      "source": "Example Security News",
+      "published_at": "2026-07-19T10:00:00Z",
+      "description": "This is a temporary item used to verify that the website can load and display feed data.",
+      "url": "https://example.com"
+    }
+  ]
+}
