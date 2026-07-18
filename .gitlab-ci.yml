@@ -1,0 +1,11 @@
+create-pages:
+  stage: deploy
+
+  script:
+    - test -s public/index.html
+    - echo "GitLab Pages content validated."
+
+  pages: true
+
+  rules:
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
