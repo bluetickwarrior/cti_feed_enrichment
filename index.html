@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
+
   <meta
     name="viewport"
     content="width=device-width, initial-scale=1"
@@ -27,9 +28,9 @@
     }
 
     header {
-      background: #111827;
-      color: #ffffff;
       padding: 2rem 1rem;
+      color: white;
+      background: #111827;
     }
 
     header div,
@@ -51,27 +52,70 @@
       padding: 2rem 0;
     }
 
-    .status {
-      padding: 1.5rem;
-      background: #ffffff;
+    #status {
+      margin-bottom: 1rem;
+      color: #4b5563;
+    }
+
+    #feed {
+      display: grid;
+      gap: 1rem;
+    }
+
+    .feed-item {
+      padding: 1.25rem;
+      background: white;
       border: 1px solid #d1d5db;
       border-radius: 0.75rem;
     }
 
-    .status h2 {
-      margin-top: 0;
+    .feed-item h2 {
+      margin: 0 0 0.5rem;
+      font-size: 1.2rem;
     }
 
-    button {
+    .metadata {
+      margin-bottom: 1rem;
+      color: #6b7280;
+      font-size: 0.9rem;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      margin-top: 1rem;
+    }
+
+    .button {
+      display: inline-block;
+      padding: 0.65rem 1rem;
+      color: white;
+      text-decoration: none;
+      background: #1f2937;
       border: 0;
       border-radius: 0.5rem;
-      padding: 0.65rem 1rem;
+      font: inherit;
       font-weight: 600;
+      cursor: pointer;
     }
 
-    button:disabled {
+    .button.secondary {
+      color: #1f2937;
+      background: #e5e7eb;
+    }
+
+    .button:disabled {
       cursor: not-allowed;
       opacity: 0.55;
+    }
+
+    .error {
+      padding: 1rem;
+      color: #991b1b;
+      background: #fee2e2;
+      border: 1px solid #fecaca;
+      border-radius: 0.5rem;
     }
   </style>
 </head>
@@ -85,18 +129,109 @@
   </header>
 
   <main>
-    <section class="status">
-      <h2>Website deployed</h2>
-
-      <p>
-        The RSS feed has not been connected yet. This page confirms that
-        the public frontend is working.
-      </p>
-
-      <button type="button" disabled>
-        Tell me more
-      </button>
-    </section>
+    <p id="status">Loading feed…</p>
+    <section id="feed" aria-live="polite"></section>
   </main>
+
+  <script>
+    const feedElement = document.querySelector("#feed");
+    const statusElement = document.querySelector("#status");
+
+    function formatDate(value) {
+      const date = new Date(value);
+
+      if (Number.isNaN(date.getTime())) {
+        return "Unknown publication date";
+      }
+
+      return new Intl.DateTimeFormat(undefined, {
+        dateStyle: "medium",
+        timeStyle: "short"
+      }).format(date);
+    }
+
+    function createFeedItem(item) {
+      const article = document.createElement("article");
+      article.className = "feed-item";
+
+      const title = document.createElement("h2");
+      title.textContent = item.title || "Untitled article";
+
+      const metadata = document.createElement("div");
+      metadata.className = "metadata";
+      metadata.textContent =
+        `${item.source || "Unknown source"} · ` +
+        formatDate(item.published_at);
+
+      const description = document.createElement("p");
+      description.textContent =
+        item.description || "No description was provided.";
+
+      const actions = document.createElement("div");
+      actions.className = "actions";
+
+      const originalLink = document.createElement("a");
+      originalLink.className = "button secondary";
+      originalLink.textContent = "Read original";
+      originalLink.href = item.url;
+      originalLink.target = "_blank";
+      originalLink.rel = "noopener noreferrer";
+
+      const researchButton = document.createElement("button");
+      researchButton.className = "button";
+      researchButton.type = "button";
+      researchButton.textContent = "Tell me more";
+      researchButton.disabled = true;
+      researchButton.title =
+        "On-demand research will be connected in a later step.";
+
+      actions.append(originalLink, researchButton);
+      article.append(title, metadata, description, actions);
+
+      return article;
+    }
+
+    async function loadFeed() {
+      try {
+        const response = await fetch("./feed.json", {
+          cache: "no-store"
+        });
+
+        if (!response.ok) {
+          throw new Error(
+            `Feed request failed with status ${response.status}`
+          );
+        }
+
+        const data = await response.json();
+
+        if (!Array.isArray(data.items)) {
+          throw new Error("Feed data does not contain an items array.");
+        }
+
+        feedElement.replaceChildren(
+          ...data.items.map(createFeedItem)
+        );
+
+        statusElement.textContent =
+          `${data.items.length} item(s) loaded. ` +
+          `Feed updated ${formatDate(data.updated_at)}.`;
+      } catch (error) {
+        console.error(error);
+
+        statusElement.textContent = "Feed unavailable.";
+
+        const message = document.createElement("div");
+        message.className = "error";
+        message.textContent =
+          "The website could not load feed.json. " +
+          "Check that the file exists in the publishing branch.";
+
+        feedElement.replaceChildren(message);
+      }
+    }
+
+    loadFeed();
+  </script>
 </body>
 </html>
