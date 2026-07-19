@@ -136,6 +136,7 @@
   <script>
     const feedElement = document.querySelector("#feed");
     const statusElement = document.querySelector("#status");
+    const FEED_URL = "https://d2c8564e9x1krw.cloudfront.net/feed/feed.json";
 
     function formatDate(value) {
       const date = new Date(value);
@@ -193,7 +194,7 @@
 
     async function loadFeed() {
       try {
-        const response = await fetch("./feed.json", {
+        const response = await fetch(https://d2c8564e9x1krw.cloudfront.net/feed/feed.json, {
           cache: "no-store"
         });
 
