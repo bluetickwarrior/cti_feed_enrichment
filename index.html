@@ -134,105 +134,114 @@
   </main>
 
   <script>
-    const feedElement = document.querySelector("#feed");
-    const statusElement = document.querySelector("#status");
-    const FEED_URL = "https://d2c8564e9x1krw.cloudfront.net/feed/feed.json";
+  const FEED_URL =
+    "https://d2c8564e9x1krw.cloudfront.net/feed/feed.json";
 
-    function formatDate(value) {
-      const date = new Date(value);
+  const feedElement = document.querySelector("#feed");
+  const statusElement = document.querySelector("#status");
 
-      if (Number.isNaN(date.getTime())) {
-        return "Unknown publication date";
-      }
+  function formatDate(value) {
+    const date = new Date(value);
 
-      return new Intl.DateTimeFormat(undefined, {
-        dateStyle: "medium",
-        timeStyle: "short"
-      }).format(date);
+    if (Number.isNaN(date.getTime())) {
+      return "Unknown publication date";
     }
 
-    function createFeedItem(item) {
-      const article = document.createElement("article");
-      article.className = "feed-item";
+    return new Intl.DateTimeFormat(undefined, {
+      dateStyle: "medium",
+      timeStyle: "short"
+    }).format(date);
+  }
 
-      const title = document.createElement("h2");
-      title.textContent = item.title || "Untitled article";
+  function createFeedItem(item) {
+    const article = document.createElement("article");
+    article.className = "feed-item";
 
-      const metadata = document.createElement("div");
-      metadata.className = "metadata";
-      metadata.textContent =
-        `${item.source || "Unknown source"} · ` +
-        formatDate(item.published_at);
+    const title = document.createElement("h2");
+    title.textContent = item.title || "Untitled article";
 
-      const description = document.createElement("p");
-      description.textContent =
-        item.description || "No description was provided.";
+    const metadata = document.createElement("div");
+    metadata.className = "metadata";
+    metadata.textContent =
+      `${item.source || "Unknown source"} · ` +
+      formatDate(item.published_at);
 
-      const actions = document.createElement("div");
-      actions.className = "actions";
+    const description = document.createElement("p");
+    description.textContent =
+      item.description || "No description was provided.";
 
-      const originalLink = document.createElement("a");
-      originalLink.className = "button secondary";
-      originalLink.textContent = "Read original";
-      originalLink.href = item.url;
-      originalLink.target = "_blank";
-      originalLink.rel = "noopener noreferrer";
+    const actions = document.createElement("div");
+    actions.className = "actions";
 
-      const researchButton = document.createElement("button");
-      researchButton.className = "button";
-      researchButton.type = "button";
-      researchButton.textContent = "Tell me more";
-      researchButton.disabled = true;
-      researchButton.title =
-        "On-demand research will be connected in a later step.";
+    const originalLink = document.createElement("a");
+    originalLink.className = "button secondary";
+    originalLink.textContent = "Read original";
+    originalLink.href = item.url;
+    originalLink.target = "_blank";
+    originalLink.rel = "noopener noreferrer";
 
-      actions.append(originalLink, researchButton);
-      article.append(title, metadata, description, actions);
+    const researchButton = document.createElement("button");
+    researchButton.className = "button";
+    researchButton.type = "button";
+    researchButton.textContent = "Tell me more";
+    researchButton.disabled = true;
 
-      return article;
-    }
+    actions.append(originalLink, researchButton);
+    article.append(title, metadata, description, actions);
 
-    async function loadFeed() {
-      try {
-        const response = await fetch(FEED_URL, {
-          cache: "no-store"
-        });
+    return article;
+  }
 
-        if (!response.ok) {
-          throw new Error(
-            `Feed request failed with status ${response.status}`
-          );
-        }
+  async function loadFeed() {
+    statusElement.textContent = "Requesting feed…";
 
-        const data = await response.json();
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
 
-        if (!Array.isArray(data.items)) {
-          throw new Error("Feed data does not contain an items array.");
-        }
+    try {
+      const response = await fetch(FEED_URL, {
+        cache: "no-store",
+        signal: controller.signal
+      });
 
-        feedElement.replaceChildren(
-          ...data.items.map(createFeedItem)
+      if (!response.ok) {
+        throw new Error(
+          `CloudFront returned HTTP ${response.status}`
         );
-
-        statusElement.textContent =
-          `${data.items.length} item(s) loaded. ` +
-          `Feed updated ${formatDate(data.updated_at)}.`;
-      } catch (error) {
-        console.error(error);
-
-        statusElement.textContent = "Feed unavailable.";
-
-        const message = document.createElement("div");
-        message.className = "error";
-        message.textContent =
-          "The website could not load feed.json. " +
-          "Check that the file exists in the publishing branch.";
-
-        feedElement.replaceChildren(message);
       }
-    }
 
-    loadFeed();
-  </script>
+      const data = await response.json();
+
+      if (!Array.isArray(data.items)) {
+        throw new Error(
+          "The returned JSON does not contain an items array."
+        );
+      }
+
+      feedElement.replaceChildren(
+        ...data.items.map(createFeedItem)
+      );
+
+      statusElement.textContent =
+        `${data.items.length} item(s) loaded. ` +
+        `Feed updated ${formatDate(data.updated_at)}.`;
+    } catch (error) {
+      console.error("Feed loading failed:", error);
+
+      statusElement.textContent = "Feed unavailable.";
+
+      const message = document.createElement("div");
+      message.className = "error";
+      message.textContent =
+        `The feed could not be loaded: ${error.message}`;
+
+      feedElement.replaceChildren(message);
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  }
+
+  loadFeed();
+</script>
 </body>
 </html>
