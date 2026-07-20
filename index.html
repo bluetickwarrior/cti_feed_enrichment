@@ -28,7 +28,7 @@
 
     header div,
     main {
-      width: min(1300px, calc(100% - 2rem));
+      width: min(1400px, calc(100% - 2rem));
       margin: 0 auto;
     }
 
@@ -43,9 +43,15 @@
 
     main {
       display: grid;
-      grid-template-columns: minmax(0, 2fr) minmax(320px, 1fr);
-      gap: 1rem;
+      grid-template-columns: minmax(0, 900px);
+      justify-content: center;
+      gap: 1.5rem;
       padding: 2rem 0;
+    }
+
+    main.panel-open {
+      grid-template-columns: minmax(0, 900px) minmax(320px, 460px);
+      justify-content: center;
     }
 
     #status {
@@ -113,7 +119,7 @@
       top: 1rem;
       align-self: start;
       max-height: calc(100vh - 2rem);
-      overflow: auto;
+      overflow-y: auto;
     }
 
     #research-panel.open {
@@ -128,8 +134,41 @@
       cursor: pointer;
     }
 
-    #research-result {
-      white-space: pre-wrap;
+    #research-panel h2 {
+      margin-top: 0;
+      padding-right: 2rem;
+    }
+
+    #research-panel h3 {
+      margin: 1.5rem 0 0.5rem;
+    }
+
+    .research-field {
+      margin-bottom: 1rem;
+      padding: 0.75rem;
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
+      border-radius: 0.5rem;
+    }
+
+    .research-field h4 {
+      margin: 0 0 0.4rem;
+    }
+
+    .research-field p {
+      margin: 0.35rem 0;
+      line-height: 1.5;
+    }
+
+    .research-field blockquote {
+      margin: 0.5rem 0;
+      padding-left: 0.75rem;
+      color: #4b5563;
+      border-left: 3px solid #d1d5db;
+    }
+
+    .research-field a {
+      color: #1d4ed8;
       overflow-wrap: anywhere;
     }
 
@@ -137,16 +176,19 @@
       color: #991b1b;
     }
 
-    @media (max-width: 900px) {
-      main {
+    @media (max-width: 1000px) {
+      main,
+      main.panel-open {
         display: block;
+        width: min(900px, calc(100% - 2rem));
       }
 
-      #research-panel {
+      #research-panel.open {
         position: fixed;
         inset: 0;
         z-index: 10;
         max-height: none;
+        border: 0;
         border-radius: 0;
       }
     }
@@ -161,16 +203,16 @@
     </div>
   </header>
 
-  <main>
+  <main id="main">
     <div>
       <p id="status">Loading feed…</p>
       <section id="feed"></section>
     </div>
 
     <aside id="research-panel">
-      <button id="close-panel" type="button">×</button>
+      <button id="close-panel" type="button" aria-label="Close">×</button>
       <h2 id="research-title">Research results</h2>
-      <pre id="research-result"></pre>
+      <div id="research-result"></div>
     </aside>
   </main>
 
@@ -181,12 +223,15 @@
     const RESEARCH_URL =
       "https://eabcv2ra8b.execute-api.ap-southeast-1.amazonaws.com/research";
 
-    const feedElement = document.querySelector("#feed");
-    const statusElement = document.querySelector("#status");
-    const panelElement = document.querySelector("#research-panel");
+    const main = document.querySelector("#main");
+    const feed = document.querySelector("#feed");
+    const status = document.querySelector("#status");
+    const panel = document.querySelector("#research-panel");
     const panelTitle = document.querySelector("#research-title");
     const panelResult = document.querySelector("#research-result");
-    const items = new Map();
+    const views = new Map();
+
+    let openItemId = null;
 
     function formatDate(value) {
       const date = new Date(value);
@@ -199,44 +244,51 @@
           }).format(date);
     }
 
-    async function request(url, options) {
-      const response = await fetch(url, options);
+    function label(value) {
+      return String(value)
+        .replaceAll("_", " ")
+        .replace(/\b\w/g, character => character.toUpperCase());
+    }
+
+    async function api(itemId, method = "GET") {
+      const response = await fetch(
+        method === "GET"
+          ? `${RESEARCH_URL}?item_id=${encodeURIComponent(itemId)}`
+          : RESEARCH_URL,
+        method === "GET"
+          ? { cache: "no-store" }
+          : {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json"
+              },
+              body: JSON.stringify({
+                item_id: itemId
+              })
+            }
+      );
+
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.message || data.error || `HTTP ${response.status}`);
+        throw new Error(
+          data.message || data.error || `HTTP ${response.status}`
+        );
       }
 
       return data;
     }
 
-    async function getResearch(itemId) {
-      return request(
-        `${RESEARCH_URL}?item_id=${encodeURIComponent(itemId)}`,
-        { cache: "no-store" }
-      );
-    }
-
-    async function queueResearch(itemId) {
-      return request(RESEARCH_URL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          item_id: itemId
-        })
-      });
-    }
-
-    function updateItem(itemId, data) {
-      const view = items.get(itemId);
+    function updateView(itemId, data) {
+      const view = views.get(itemId);
 
       if (!view) {
         return;
       }
 
-      view.status = String(data.status || "NOT_REQUESTED").toUpperCase();
+      view.status = String(
+        data.status || "NOT_REQUESTED"
+      ).toUpperCase();
 
       if (data.result) {
         view.result = data.result;
@@ -265,21 +317,148 @@
       }
     }
 
-    function showResult(item, result) {
-      panelTitle.textContent = item.title;
-      panelResult.textContent = JSON.stringify(result, null, 2);
-      panelElement.classList.add("open");
+    function addText(parent, heading, value) {
+      const section = document.createElement("section");
+      const title = document.createElement("h3");
+      const text = document.createElement("p");
+
+      title.textContent = heading;
+      text.textContent = value || "Not provided.";
+
+      section.append(title, text);
+      parent.append(section);
+    }
+
+    function renderResult(item, storedResult) {
+      const documentResult = storedResult || {};
+      const result = documentResult.result || documentResult;
+      const identity = result.identity || {};
+      const fields = Array.isArray(result.fields)
+        ? Object.fromEntries(
+            result.fields.map(field => [field.name, field])
+          )
+        : result.fields || {};
+
+      panelTitle.textContent = item.title || "Research results";
+      panelResult.replaceChildren();
+
+      addText(
+        panelResult,
+        "Summary",
+        result.summary
+      );
+
+      addText(
+        panelResult,
+        "Article type",
+        label(result.article_type || "unknown")
+      );
+
+      addText(
+        panelResult,
+        "Identity",
+        [
+          `CVEs: ${(identity.cve_ids || []).join(", ") || "None identified"}`,
+          `Vendors: ${(identity.vendors || []).join(", ") || "None identified"}`,
+          `Products: ${(identity.products || []).join(", ") || "None identified"}`
+        ].join("\n")
+      );
+
+      const fieldsTitle = document.createElement("h3");
+      fieldsTitle.textContent = "Key findings";
+      panelResult.append(fieldsTitle);
+
+      for (const [name, field] of Object.entries(fields)) {
+        const box = document.createElement("div");
+        const heading = document.createElement("h4");
+        const answer = document.createElement("p");
+        const fieldStatus = document.createElement("p");
+
+        box.className = "research-field";
+        heading.textContent = label(name);
+        answer.textContent =
+          `Answer: ${
+            field.value === null ||
+            field.value === undefined ||
+            field.value === ""
+              ? "No answer found"
+              : String(field.value)
+          }`;
+        fieldStatus.textContent =
+          `Status: ${label(field.status || "unknown")}`;
+
+        box.append(heading, answer, fieldStatus);
+
+        if (field.notes) {
+          const notes = document.createElement("p");
+          notes.textContent = `Notes: ${field.notes}`;
+          box.append(notes);
+        }
+
+        for (const evidence of field.evidence || []) {
+          const quote = document.createElement("blockquote");
+          const source = document.createElement("a");
+
+          quote.textContent = evidence.quote || "";
+          source.textContent =
+            evidence.source_title ||
+            evidence.source_url ||
+            "Source";
+          source.href = evidence.source_url;
+          source.target = "_blank";
+          source.rel = "noopener noreferrer";
+
+          box.append(quote, source);
+        }
+
+        panelResult.append(box);
+      }
+
+      addText(
+        panelResult,
+        "Limitations",
+        (result.limitations || []).join("\n") ||
+          "No limitations were recorded."
+      );
+
+      addText(
+        panelResult,
+        "Conflicting information",
+        (result.conflicts || [])
+          .map(conflict =>
+            `${label(conflict.field)}: ${
+              conflict.notes || "Conflicting evidence was found."
+            }`
+          )
+          .join("\n") ||
+          "No conflicting information was found."
+      );
+
+      panel.classList.add("open");
+      main.classList.add("panel-open");
+      openItemId = item.id;
+    }
+
+    function closePanel() {
+      panel.classList.remove("open");
+      main.classList.remove("panel-open");
+      openItemId = null;
     }
 
     async function handleResearch(item) {
-      const view = items.get(item.id);
+      const view = views.get(item.id);
 
       if (view.status === "COMPLETE") {
-        if (!view.result) {
-          updateItem(item.id, await getResearch(item.id));
+        if (openItemId === item.id) {
+          closePanel();
+          return;
         }
 
-        showResult(item, view.result);
+        if (!view.result) {
+          updateView(item.id, await api(item.id));
+        }
+
+        renderResult(item, view.result);
         return;
       }
 
@@ -287,7 +466,7 @@
       view.button.textContent = "Requesting…";
 
       try {
-        updateItem(item.id, await queueResearch(item.id));
+        updateView(item.id, await api(item.id, "POST"));
       } catch (error) {
         view.button.disabled = false;
         view.button.textContent = "Try again";
@@ -298,14 +477,18 @@
 
     function createFeedItem(item) {
       const article = document.createElement("article");
-      article.className = "feed-item";
 
+      article.className = "feed-item";
       article.innerHTML = `
         <h2></h2>
         <div class="metadata"></div>
         <p class="description"></p>
         <div class="actions">
-          <a class="button secondary" target="_blank" rel="noopener noreferrer">
+          <a
+            class="button secondary"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
             Read original
           </a>
           <button class="button" type="button" disabled>
@@ -319,7 +502,8 @@
         item.title || "Untitled article";
 
       article.querySelector(".metadata").textContent =
-        `${item.source || "Unknown source"} · ${formatDate(item.published_at)}`;
+        `${item.source || "Unknown source"} · ` +
+        formatDate(item.published_at);
 
       article.querySelector(".description").textContent =
         item.description || "No description was provided.";
@@ -329,9 +513,11 @@
       const button = article.querySelector("button");
       const message = article.querySelector(".research-status");
 
-      button.addEventListener("click", () => handleResearch(item));
+      button.addEventListener("click", () => {
+        handleResearch(item);
+      });
 
-      items.set(item.id, {
+      views.set(item.id, {
         item,
         button,
         message,
@@ -343,18 +529,23 @@
     }
 
     async function refreshStatuses() {
-      await Promise.allSettled(
-        [...items.keys()].map(async itemId => {
-          try {
-            updateItem(itemId, await getResearch(itemId));
-          } catch (error) {
-            const view = items.get(itemId);
-            view.button.disabled = false;
-            view.button.textContent = "Tell me more";
-            view.message.textContent = error.message;
-          }
-        })
-      );
+      for (const [itemId, view] of views) {
+        if (
+          view.status !== "CHECKING" &&
+          view.status !== "QUEUED" &&
+          view.status !== "PROCESSING"
+        ) {
+          continue;
+        }
+
+        try {
+          updateView(itemId, await api(itemId));
+        } catch (error) {
+          view.button.disabled = false;
+          view.button.textContent = "Tell me more";
+          view.message.textContent = error.message;
+        }
+      }
     }
 
     async function loadFeed() {
@@ -369,25 +560,25 @@
 
         const data = await response.json();
 
-        feedElement.replaceChildren(
+        feed.replaceChildren(
           ...data.items.map(createFeedItem)
         );
 
-        statusElement.textContent =
+        status.textContent =
           `${data.items.length} item(s) loaded. ` +
           `Feed updated ${formatDate(data.updated_at)}.`;
 
         await refreshStatuses();
-        setInterval(refreshStatuses, 5000);
+        setInterval(refreshStatuses, 20000);
       } catch (error) {
-        statusElement.textContent = "Feed unavailable.";
-        feedElement.textContent = error.message;
+        status.textContent = "Feed unavailable.";
+        feed.textContent = error.message;
       }
     }
 
-    document.querySelector("#close-panel").addEventListener("click", () => {
-      panelElement.classList.remove("open");
-    });
+    document
+      .querySelector("#close-panel")
+      .addEventListener("click", closePanel);
 
     loadFeed();
   </script>
