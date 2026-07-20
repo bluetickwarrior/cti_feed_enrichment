@@ -7,12 +7,15 @@
 
   <style>
     :root {
-      --paper: #f4f1ea;
-      --ink: #171717;
-      --muted: #66625b;
-      --rule: #b9b3a8;
-      --accent: #a52a23;
-      --panel: #fffdf8;
+      color-scheme: dark;
+      --background: #0a0d11;
+      --surface: #10151b;
+      --surface-raised: #151b23;
+      --text: #eef2f7;
+      --muted: #8d98a8;
+      --line: #27303b;
+      --accent: #5aa7ff;
+      --danger: #ff6b6b;
     }
 
     * {
@@ -21,147 +24,157 @@
 
     body {
       margin: 0;
-      color: var(--ink);
-      background: var(--paper);
-      font-family: Arial, Helvetica, sans-serif;
+      color: var(--text);
+      background: var(--background);
+      font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    button,
+    a {
+      font: inherit;
     }
 
     header {
-      border-bottom: 3px solid var(--ink);
+      border-bottom: 1px solid var(--line);
+      background: rgba(10, 13, 17, 0.96);
     }
 
-    .masthead {
+    .header-inner {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 24px;
       width: min(1440px, calc(100% - 40px));
       margin: auto;
-      padding: 28px 0 20px;
+      padding: 22px 0;
     }
 
-    .eyebrow {
-      margin: 0 0 8px;
-      color: var(--accent);
-      font-size: 11px;
+    .brand {
+      margin: 0;
+      font-size: 13px;
       font-weight: 700;
-      letter-spacing: .16em;
+      letter-spacing: 0.13em;
       text-transform: uppercase;
     }
 
-    h1 {
-      margin: 0;
-      font-family: Georgia, "Times New Roman", serif;
-      font-size: clamp(34px, 5vw, 72px);
-      font-weight: 400;
-      letter-spacing: -.045em;
-      line-height: .95;
+    .brand span {
+      color: var(--accent);
     }
 
-    .deck {
-      max-width: 620px;
-      margin: 14px 0 0;
+    .header-description {
+      max-width: 520px;
+      margin: 0;
       color: var(--muted);
-      font-family: Georgia, "Times New Roman", serif;
-      font-size: 17px;
-      line-height: 1.45;
+      font-size: 13px;
+      line-height: 1.5;
+      text-align: right;
     }
 
     main {
       display: grid;
-      grid-template-columns: minmax(0, 860px);
+      grid-template-columns: minmax(0, 900px);
       justify-content: center;
       width: min(1440px, calc(100% - 40px));
       margin: auto;
-      padding: 34px 0 70px;
+      padding: 32px 0 70px;
     }
 
     main.panel-open {
-      grid-template-columns: 220px minmax(0, 1fr);
+      grid-template-columns: 210px minmax(0, 1fr);
       justify-content: stretch;
-      gap: 34px;
+      gap: 24px;
     }
 
     #status {
-      margin: 0 0 24px;
-      padding-bottom: 10px;
-      border-bottom: 1px solid var(--rule);
+      margin: 0 0 14px;
       color: var(--muted);
       font-size: 12px;
-      letter-spacing: .06em;
-      text-transform: uppercase;
     }
 
     #feed {
-      border-top: 1px solid var(--ink);
+      border-top: 1px solid var(--line);
     }
 
     .feed-item {
-      padding: 24px 0 26px;
-      border-bottom: 1px solid var(--rule);
+      padding: 24px 0;
+      border-bottom: 1px solid var(--line);
     }
 
     .feed-item h2 {
-      max-width: 760px;
+      max-width: 800px;
       margin: 0 0 8px;
-      font-family: Georgia, "Times New Roman", serif;
-      font-size: clamp(22px, 3vw, 34px);
-      font-weight: 400;
-      letter-spacing: -.02em;
-      line-height: 1.08;
+      font-size: clamp(20px, 2.5vw, 30px);
+      font-weight: 600;
+      letter-spacing: -0.025em;
+      line-height: 1.15;
     }
 
     .metadata {
-      margin-bottom: 14px;
-      color: var(--accent);
-      font-size: 11px;
-      font-weight: 700;
-      letter-spacing: .08em;
-      text-transform: uppercase;
+      margin-bottom: 13px;
+      color: var(--muted);
+      font-size: 12px;
     }
 
     .description {
-      max-width: 720px;
+      max-width: 760px;
       margin: 0;
-      color: #3e3b36;
-      font-family: Georgia, "Times New Roman", serif;
-      font-size: 17px;
-      line-height: 1.55;
+      color: #c5ccd6;
+      font-size: 15px;
+      line-height: 1.6;
     }
 
     .actions {
       display: flex;
+      flex-wrap: wrap;
       align-items: center;
-      gap: 18px;
+      gap: 10px;
       margin-top: 18px;
     }
 
     .button {
-      padding: 0 0 3px;
-      color: var(--ink);
-      background: none;
-      border: 0;
-      border-bottom: 1px solid currentColor;
-      border-radius: 0;
-      font: inherit;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 36px;
+      padding: 0 13px;
+      color: var(--background);
+      background: var(--text);
+      border: 1px solid var(--text);
+      border-radius: 4px;
       font-size: 12px;
       font-weight: 700;
-      letter-spacing: .04em;
       text-decoration: none;
-      text-transform: uppercase;
       cursor: pointer;
     }
 
     .button:hover {
-      color: var(--accent);
+      color: var(--background);
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+
+    .button.secondary {
+      color: var(--text);
+      background: transparent;
+      border-color: var(--line);
+    }
+
+    .button.secondary:hover {
+      color: var(--text);
+      background: var(--surface-raised);
+      border-color: #3a4654;
     }
 
     .button:disabled {
       color: var(--muted);
+      background: var(--surface);
+      border-color: var(--line);
       cursor: not-allowed;
     }
 
     .research-status {
       color: var(--muted);
-      font-family: Georgia, "Times New Roman", serif;
-      font-size: 13px;
-      font-style: italic;
+      font-size: 12px;
     }
 
     #research-panel {
@@ -171,92 +184,121 @@
       align-self: start;
       max-height: calc(100vh - 40px);
       overflow: auto;
-      padding: 28px 34px 50px;
-      background: var(--panel);
-      border-top: 5px solid var(--ink);
-      border-bottom: 1px solid var(--ink);
+      background: var(--surface);
+      border: 1px solid var(--line);
     }
 
     #research-panel.open {
       display: block;
     }
 
+    .panel-header {
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      padding: 24px 28px 22px;
+      background: rgba(16, 21, 27, 0.97);
+      border-bottom: 1px solid var(--line);
+      backdrop-filter: blur(10px);
+    }
+
+    #research-title {
+      max-width: 1000px;
+      margin: 0;
+      padding-right: 50px;
+      font-size: clamp(26px, 3vw, 44px);
+      font-weight: 600;
+      letter-spacing: -0.035em;
+      line-height: 1.08;
+    }
+
     #close-panel {
-      float: right;
-      margin: -4px 0 12px 20px;
+      position: absolute;
+      top: 20px;
+      right: 24px;
+      width: 32px;
+      height: 32px;
       padding: 0;
-      color: var(--ink);
-      background: none;
-      border: 0;
-      font-family: Georgia, "Times New Roman", serif;
-      font-size: 32px;
+      color: var(--muted);
+      background: transparent;
+      border: 1px solid var(--line);
+      border-radius: 4px;
+      font-size: 20px;
       line-height: 1;
       cursor: pointer;
     }
 
-    #research-title {
-      max-width: 900px;
-      margin: 0 50px 34px 0;
-      font-family: Georgia, "Times New Roman", serif;
-      font-size: clamp(32px, 4vw, 58px);
-      font-weight: 400;
-      letter-spacing: -.035em;
-      line-height: 1;
+    #close-panel:hover {
+      color: var(--text);
+      border-color: #485464;
+    }
+
+    #research-result {
+      padding: 0 28px 42px;
     }
 
     .research-section {
       display: grid;
-      grid-template-columns: 170px minmax(0, 1fr);
-      gap: 24px;
-      padding: 22px 0;
-      border-top: 1px solid var(--rule);
+      grid-template-columns: 180px minmax(0, 1fr);
+      gap: 28px;
+      padding: 24px 0;
+      border-bottom: 1px solid var(--line);
     }
 
     .research-section h3 {
       margin: 0;
-      color: var(--accent);
+      color: var(--muted);
       font-size: 11px;
-      letter-spacing: .1em;
-      line-height: 1.4;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      line-height: 1.5;
       text-transform: uppercase;
     }
 
     .research-content p {
       margin: 0 0 10px;
-      font-family: Georgia, "Times New Roman", serif;
-      font-size: 17px;
-      line-height: 1.55;
+      color: var(--text);
+      font-size: 15px;
+      line-height: 1.6;
       white-space: pre-line;
+    }
+
+    .research-content p:last-child {
+      margin-bottom: 0;
     }
 
     .field-status,
     .field-notes {
-      color: var(--muted);
-      font-family: Arial, Helvetica, sans-serif !important;
+      color: var(--muted) !important;
       font-size: 12px !important;
     }
 
     .evidence {
-      margin: 18px 0 0;
-      padding: 14px 0 0 18px;
-      border-left: 2px solid var(--rule);
+      margin-top: 18px;
+      padding: 14px 16px;
+      background: var(--surface-raised);
+      border-left: 2px solid var(--accent);
     }
 
     .evidence blockquote {
-      margin: 0 0 8px;
-      color: #393631;
-      font-family: Georgia, "Times New Roman", serif;
-      font-size: 15px;
-      line-height: 1.5;
+      margin: 0 0 10px;
+      color: #d6dce5;
+      font-size: 14px;
+      line-height: 1.55;
     }
 
     .evidence a {
       color: var(--accent);
       font-size: 11px;
       font-weight: 700;
-      letter-spacing: .05em;
+      letter-spacing: 0.05em;
+      text-decoration: none;
       text-transform: uppercase;
       overflow-wrap: anywhere;
+    }
+
+    .evidence a:hover {
+      text-decoration: underline;
     }
 
     main.panel-open #status,
@@ -268,40 +310,52 @@
     }
 
     main.panel-open #feed {
-      border-top: 3px solid var(--ink);
+      border-top-color: #394451;
     }
 
     main.panel-open .feed-item {
-      padding: 14px 0 16px;
+      padding: 14px 0;
     }
 
     main.panel-open .feed-item h2 {
       margin: 0;
-      font-family: Arial, Helvetica, sans-serif;
       font-size: 13px;
-      font-weight: 700;
-      letter-spacing: 0;
-      line-height: 1.35;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+      line-height: 1.4;
     }
 
     main.panel-open .actions {
       display: block;
-      margin-top: 8px;
+      margin-top: 9px;
     }
 
     main.panel-open .button {
+      width: 100%;
+      min-height: 30px;
+      padding: 0 8px;
       font-size: 10px;
     }
 
+    .error {
+      color: var(--danger);
+    }
+
     @media (max-width: 850px) {
-      .masthead,
-      main {
+      .header-inner {
+        display: block;
         width: calc(100% - 28px);
+      }
+
+      .header-description {
+        margin-top: 8px;
+        text-align: left;
       }
 
       main,
       main.panel-open {
         display: block;
+        width: calc(100% - 28px);
       }
 
       #research-panel.open {
@@ -309,9 +363,7 @@
         inset: 0;
         z-index: 20;
         max-height: none;
-        padding: 24px 20px 50px;
         border: 0;
-        border-top: 5px solid var(--ink);
       }
 
       .research-section {
@@ -327,10 +379,11 @@
 
 <body>
   <header>
-    <div class="masthead">
-      <p class="eyebrow">Blue Tick Warrior / Intelligence Desk</p>
-      <h1>Threat Intelligence</h1>
-      <p class="deck">Current security reporting with on-demand technical research.</p>
+    <div class="header-inner">
+      <p class="brand"><span>Blue Tick Warrior</span> / Threat Intelligence</p>
+      <p class="header-description">
+        Security reporting with on-demand technical research and source validation.
+      </p>
     </div>
   </header>
 
@@ -341,15 +394,21 @@
     </section>
 
     <aside id="research-panel">
-      <button id="close-panel" type="button" aria-label="Close research panel">×</button>
-      <h2 id="research-title">Research results</h2>
+      <div class="panel-header">
+        <button id="close-panel" type="button" aria-label="Close research panel">×</button>
+        <h2 id="research-title">Research results</h2>
+      </div>
+
       <div id="research-result"></div>
     </aside>
   </main>
 
   <script>
-    const FEED_URL = "https://d2c8564e9x1krw.cloudfront.net/feed/feed.json?v=2";
-    const RESEARCH_URL = "https://eabcv2ra8b.execute-api.ap-southeast-1.amazonaws.com/research";
+    const FEED_URL =
+      "https://d2c8564e9x1krw.cloudfront.net/feed/feed.json?v=2";
+
+    const RESEARCH_URL =
+      "https://eabcv2ra8b.execute-api.ap-southeast-1.amazonaws.com/research";
 
     const main = document.querySelector("#main");
     const feed = document.querySelector("#feed");
@@ -383,6 +442,10 @@
         return "No answer found.";
       }
 
+      if (typeof value === "boolean") {
+        return value ? "Yes" : "No";
+      }
+
       if (Array.isArray(value)) {
         return value.length ? value.join(", ") : "None identified.";
       }
@@ -403,15 +466,21 @@
           ? { cache: "no-store" }
           : {
               method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ item_id: itemId })
+              headers: {
+                "Content-Type": "application/json"
+              },
+              body: JSON.stringify({
+                item_id: itemId
+              })
             }
       );
 
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.message || data.error || `HTTP ${response.status}`);
+        throw new Error(
+          data.message || data.error || `HTTP ${response.status}`
+        );
       }
 
       return data;
@@ -424,7 +493,9 @@
         return;
       }
 
-      view.status = String(data.status || "NOT_REQUESTED").toUpperCase();
+      view.status = String(
+        data.status || "NOT_REQUESTED"
+      ).toUpperCase();
 
       if (data.result) {
         view.result = data.result;
@@ -445,7 +516,8 @@
       } else if (view.status.startsWith("FAILED")) {
         view.button.textContent = "Try again";
         view.button.disabled = false;
-        view.message.textContent = data.error || "Research failed.";
+        view.message.textContent =
+          data.error || "Research failed.";
       } else {
         view.button.textContent = "Tell me more";
         view.button.disabled = false;
@@ -461,6 +533,7 @@
 
       section.className = "research-section";
       content.className = "research-content";
+
       heading.textContent = title;
       text.textContent = displayValue(value);
 
@@ -468,34 +541,43 @@
 
       if (statusValue) {
         const fieldStatus = document.createElement("p");
+
         fieldStatus.className = "field-status";
         fieldStatus.textContent = `Status: ${label(statusValue)}`;
+
         content.append(fieldStatus);
       }
 
       if (notes) {
         const fieldNotes = document.createElement("p");
+
         fieldNotes.className = "field-notes";
         fieldNotes.textContent = notes;
+
         content.append(fieldNotes);
       }
 
       for (const item of evidence) {
         const evidenceBlock = document.createElement("div");
+
         evidenceBlock.className = "evidence";
 
         if (item.quote) {
           const quote = document.createElement("blockquote");
+
           quote.textContent = item.quote;
           evidenceBlock.append(quote);
         }
 
         if (item.source_url) {
           const source = document.createElement("a");
+
           source.href = item.source_url;
           source.target = "_blank";
           source.rel = "noopener noreferrer";
-          source.textContent = item.source_title || "Open source";
+          source.textContent =
+            item.source_title || "Open source";
+
           evidenceBlock.append(source);
         }
 
@@ -507,22 +589,31 @@
     }
 
     function renderResult(item, storedResult) {
-      const result = storedResult?.result || storedResult || {};
+      const result =
+        storedResult?.result || storedResult || {};
+
       const identity = result.identity || {};
 
       const fields = Array.isArray(result.fields)
         ? result.fields
-        : Object.entries(result.fields || {}).map(([name, field]) => ({
-            name,
-            ...(typeof field === "object" && field !== null
-              ? field
-              : { value: field })
-          }));
+        : Object.entries(result.fields || {}).map(
+            ([name, field]) => ({
+              name,
+              ...(typeof field === "object" && field !== null
+                ? field
+                : { value: field })
+            })
+          );
 
-      panelTitle.textContent = item.title || "Research results";
+      panelTitle.textContent =
+        item.title || "Research results";
+
       panelResult.replaceChildren();
 
-      addSection("Article type", label(result.article_type || "Unknown"));
+      addSection(
+        "Article type",
+        label(result.article_type || "Unknown")
+      );
 
       addSection(
         "Identity",
@@ -544,17 +635,22 @@
       }
 
       if (result.limitations?.length) {
-        addSection("Limitations", result.limitations.join("\n"));
+        addSection(
+          "Limitations",
+          result.limitations.join("\n")
+        );
       }
 
       if (result.conflicts?.length) {
         addSection(
           "Conflicting information",
           result.conflicts
-            .map(conflict =>
-              `${label(conflict.field || "Finding")}: ${
-                conflict.notes || "Conflicting evidence was found."
-              }`
+            .map(
+              conflict =>
+                `${label(conflict.field || "Finding")}: ${
+                  conflict.notes ||
+                  "Conflicting evidence was found."
+                }`
             )
             .join("\n")
         );
@@ -582,7 +678,10 @@
 
         try {
           if (!view.result) {
-            updateView(item.id, await api(item.id));
+            updateView(
+              item.id,
+              await api(item.id)
+            );
           }
 
           renderResult(item, view.result);
@@ -597,11 +696,15 @@
       view.button.textContent = "Requesting";
 
       try {
-        updateView(item.id, await api(item.id, "POST"));
+        updateView(
+          item.id,
+          await api(item.id, "POST")
+        );
       } catch (error) {
         view.button.disabled = false;
         view.button.textContent = "Try again";
         view.message.textContent = error.message;
+        view.message.classList.add("error");
       }
     }
 
@@ -609,28 +712,55 @@
       const article = document.createElement("article");
 
       article.className = "feed-item";
+
       article.innerHTML = `
         <h2></h2>
         <div class="metadata"></div>
         <p class="description"></p>
         <div class="actions">
-          <a class="button secondary" target="_blank" rel="noopener noreferrer">Read original</a>
-          <button class="button" type="button" disabled>Checking</button>
+          <a
+            class="button secondary"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Read original
+          </a>
+
+          <button
+            class="button"
+            type="button"
+            disabled
+          >
+            Checking
+          </button>
+
           <span class="research-status"></span>
         </div>
       `;
 
-      article.querySelector("h2").textContent = item.title || "Untitled article";
+      article.querySelector("h2").textContent =
+        item.title || "Untitled article";
+
       article.querySelector(".metadata").textContent =
-        `${item.source || "Unknown source"} / ${formatDate(item.published_at)}`;
+        `${item.source || "Unknown source"} · ` +
+        formatDate(item.published_at);
+
       article.querySelector(".description").textContent =
         item.description || "No description provided.";
-      article.querySelector("a").href = item.url || "#";
 
-      const button = article.querySelector("button");
-      const message = article.querySelector(".research-status");
+      article.querySelector("a").href =
+        item.url || "#";
 
-      button.addEventListener("click", () => handleResearch(item));
+      const button =
+        article.querySelector("button");
+
+      const message =
+        article.querySelector(".research-status");
+
+      button.addEventListener(
+        "click",
+        () => handleResearch(item)
+      );
 
       views.set(item.id, {
         item,
@@ -645,12 +775,18 @@
 
     async function refreshStatuses() {
       for (const [itemId, view] of views) {
-        if (!["CHECKING", "QUEUED", "PROCESSING"].includes(view.status)) {
+        if (
+          !["CHECKING", "QUEUED", "PROCESSING"]
+            .includes(view.status)
+        ) {
           continue;
         }
 
         try {
-          updateView(itemId, await api(itemId));
+          updateView(
+            itemId,
+            await api(itemId)
+          );
         } catch (error) {
           view.button.disabled = false;
           view.button.textContent = "Tell me more";
@@ -661,7 +797,10 @@
 
     async function loadFeed() {
       try {
-        const response = await fetch(FEED_URL, { cache: "no-store" });
+        const response = await fetch(
+          FEED_URL,
+          { cache: "no-store" }
+        );
 
         if (!response.ok) {
           throw new Error(`HTTP ${response.status}`);
@@ -670,12 +809,20 @@
         const data = await response.json();
         const items = data.items || [];
 
-        feed.replaceChildren(...items.map(createFeedItem));
+        feed.replaceChildren(
+          ...items.map(createFeedItem)
+        );
+
         status.textContent =
-          `${items.length} reports / updated ${formatDate(data.updated_at)}`;
+          `${items.length} reports · Updated ` +
+          formatDate(data.updated_at);
 
         await refreshStatuses();
-        setInterval(refreshStatuses, 20000);
+
+        setInterval(
+          refreshStatuses,
+          20000
+        );
       } catch (error) {
         status.textContent = "Feed unavailable";
         feed.textContent = error.message;
@@ -684,7 +831,10 @@
 
     document
       .querySelector("#close-panel")
-      .addEventListener("click", closePanel);
+      .addEventListener(
+        "click",
+        closePanel
+      );
 
     loadFeed();
   </script>
