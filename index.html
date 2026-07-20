@@ -1,3 +1,4 @@
+```html
 <!doctype html>
 <html lang="en">
 <head>
@@ -134,114 +135,149 @@
   </main>
 
   <script>
-  const FEED_URL =
-    "https://d2c8564e9x1krw.cloudfront.net/feed/feed.json?v=2";
+    const FEED_URL =
+      "https://d2c8564e9x1krw.cloudfront.net/feed/feed.json?v=2";
 
-  const feedElement = document.querySelector("#feed");
-  const statusElement = document.querySelector("#status");
+    const RESEARCH_URL =
+      "https://eabcv2ra8b.execute-api.ap-southeast-1.amazonaws.com/research";
 
-  function formatDate(value) {
-    const date = new Date(value);
+    const feedElement = document.querySelector("#feed");
+    const statusElement = document.querySelector("#status");
 
-    if (Number.isNaN(date.getTime())) {
-      return "Unknown publication date";
+    function formatDate(value) {
+      const date = new Date(value);
+
+      if (Number.isNaN(date.getTime())) {
+        return "Unknown publication date";
+      }
+
+      return new Intl.DateTimeFormat(undefined, {
+        dateStyle: "medium",
+        timeStyle: "short"
+      }).format(date);
     }
 
-    return new Intl.DateTimeFormat(undefined, {
-      dateStyle: "medium",
-      timeStyle: "short"
-    }).format(date);
-  }
+    async function requestResearch(item, button) {
+      button.disabled = true;
+      button.textContent = "Requesting…";
 
-  function createFeedItem(item) {
-    const article = document.createElement("article");
-    article.className = "feed-item";
+      try {
+        const response = await fetch(RESEARCH_URL, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            item_id: item.item_id
+          })
+        });
 
-    const title = document.createElement("h2");
-    title.textContent = item.title || "Untitled article";
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
 
-    const metadata = document.createElement("div");
-    metadata.className = "metadata";
-    metadata.textContent =
-      `${item.source || "Unknown source"} · ` +
-      formatDate(item.published_at);
+        button.textContent = "Research queued";
+      } catch (error) {
+        console.error("Research request failed:", error);
+        button.textContent = "Try again";
+        button.disabled = false;
+      }
+    }
 
-    const description = document.createElement("p");
-    description.textContent =
-      item.description || "No description was provided.";
+    function createFeedItem(item) {
+      const article = document.createElement("article");
+      article.className = "feed-item";
 
-    const actions = document.createElement("div");
-    actions.className = "actions";
+      const title = document.createElement("h2");
+      title.textContent = item.title || "Untitled article";
 
-    const originalLink = document.createElement("a");
-    originalLink.className = "button secondary";
-    originalLink.textContent = "Read original";
-    originalLink.href = item.url;
-    originalLink.target = "_blank";
-    originalLink.rel = "noopener noreferrer";
+      const metadata = document.createElement("div");
+      metadata.className = "metadata";
+      metadata.textContent =
+        `${item.source || "Unknown source"} · ` +
+        formatDate(item.published_at);
 
-    const researchButton = document.createElement("button");
-    researchButton.className = "button";
-    researchButton.type = "button";
-    researchButton.textContent = "Tell me more";
-    researchButton.disabled = true;
+      const description = document.createElement("p");
+      description.textContent =
+        item.description || "No description was provided.";
 
-    actions.append(originalLink, researchButton);
-    article.append(title, metadata, description, actions);
+      const actions = document.createElement("div");
+      actions.className = "actions";
 
-    return article;
-  }
+      const originalLink = document.createElement("a");
+      originalLink.className = "button secondary";
+      originalLink.textContent = "Read original";
+      originalLink.href = item.url;
+      originalLink.target = "_blank";
+      originalLink.rel = "noopener noreferrer";
 
-  async function loadFeed() {
-    statusElement.textContent = "Requesting feed…";
+      const researchButton = document.createElement("button");
+      researchButton.className = "button";
+      researchButton.type = "button";
+      researchButton.textContent = "Tell me more";
+      researchButton.disabled = !item.item_id;
 
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 15000);
-
-    try {
-      const response = await fetch(FEED_URL, {
-        cache: "no-store",
-        signal: controller.signal
+      researchButton.addEventListener("click", () => {
+        requestResearch(item, researchButton);
       });
 
-      if (!response.ok) {
-        throw new Error(
-          `CloudFront returned HTTP ${response.status}`
-        );
-      }
+      actions.append(originalLink, researchButton);
+      article.append(title, metadata, description, actions);
 
-      const data = await response.json();
-
-      if (!Array.isArray(data.items)) {
-        throw new Error(
-          "The returned JSON does not contain an items array."
-        );
-      }
-
-      feedElement.replaceChildren(
-        ...data.items.map(createFeedItem)
-      );
-
-      statusElement.textContent =
-        `${data.items.length} item(s) loaded. ` +
-        `Feed updated ${formatDate(data.updated_at)}.`;
-    } catch (error) {
-      console.error("Feed loading failed:", error);
-
-      statusElement.textContent = "Feed unavailable.";
-
-      const message = document.createElement("div");
-      message.className = "error";
-      message.textContent =
-        `The feed could not be loaded: ${error.message}`;
-
-      feedElement.replaceChildren(message);
-    } finally {
-      clearTimeout(timeoutId);
+      return article;
     }
-  }
 
-  loadFeed();
-</script>
+    async function loadFeed() {
+      statusElement.textContent = "Requesting feed…";
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+      try {
+        const response = await fetch(FEED_URL, {
+          cache: "no-store",
+          signal: controller.signal
+        });
+
+        if (!response.ok) {
+          throw new Error(
+            `CloudFront returned HTTP ${response.status}`
+          );
+        }
+
+        const data = await response.json();
+
+        if (!Array.isArray(data.items)) {
+          throw new Error(
+            "The returned JSON does not contain an items array."
+          );
+        }
+
+        feedElement.replaceChildren(
+          ...data.items.map(createFeedItem)
+        );
+
+        statusElement.textContent =
+          `${data.items.length} item(s) loaded. ` +
+          `Feed updated ${formatDate(data.updated_at)}.`;
+      } catch (error) {
+        console.error("Feed loading failed:", error);
+
+        statusElement.textContent = "Feed unavailable.";
+
+        const message = document.createElement("div");
+        message.className = "error";
+        message.textContent =
+          `The feed could not be loaded: ${error.message}`;
+
+        feedElement.replaceChildren(message);
+      } finally {
+        clearTimeout(timeoutId);
+      }
+    }
+
+    loadFeed();
+  </script>
 </body>
 </html>
+```
