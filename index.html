@@ -1,21 +1,13 @@
-```html
 <!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
-
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1"
-  >
-
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Threat Intelligence Feed</title>
 
   <style>
     :root {
-      font-family:
-        Inter, system-ui, -apple-system, BlinkMacSystemFont,
-        "Segoe UI", sans-serif;
+      font-family: Inter, system-ui, sans-serif;
       color: #1f2937;
       background: #f3f4f6;
     }
@@ -36,7 +28,7 @@
 
     header div,
     main {
-      width: min(900px, calc(100% - 2rem));
+      width: min(1300px, calc(100% - 2rem));
       margin: 0 auto;
     }
 
@@ -50,11 +42,14 @@
     }
 
     main {
+      display: grid;
+      grid-template-columns: minmax(0, 2fr) minmax(320px, 1fr);
+      gap: 1rem;
       padding: 2rem 0;
     }
 
     #status {
-      margin-bottom: 1rem;
+      margin-top: 0;
       color: #4b5563;
     }
 
@@ -63,7 +58,8 @@
       gap: 1rem;
     }
 
-    .feed-item {
+    .feed-item,
+    #research-panel {
       padding: 1.25rem;
       background: white;
       border: 1px solid #d1d5db;
@@ -75,29 +71,29 @@
       font-size: 1.2rem;
     }
 
-    .metadata {
-      margin-bottom: 1rem;
+    .metadata,
+    .research-status {
       color: #6b7280;
       font-size: 0.9rem;
     }
 
     .actions {
       display: flex;
+      align-items: center;
       flex-wrap: wrap;
       gap: 0.75rem;
       margin-top: 1rem;
     }
 
     .button {
-      display: inline-block;
       padding: 0.65rem 1rem;
       color: white;
-      text-decoration: none;
       background: #1f2937;
       border: 0;
       border-radius: 0.5rem;
       font: inherit;
       font-weight: 600;
+      text-decoration: none;
       cursor: pointer;
     }
 
@@ -111,12 +107,48 @@
       opacity: 0.55;
     }
 
+    #research-panel {
+      display: none;
+      position: sticky;
+      top: 1rem;
+      align-self: start;
+      max-height: calc(100vh - 2rem);
+      overflow: auto;
+    }
+
+    #research-panel.open {
+      display: block;
+    }
+
+    #close-panel {
+      float: right;
+      border: 0;
+      background: none;
+      font-size: 1.5rem;
+      cursor: pointer;
+    }
+
+    #research-result {
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+    }
+
     .error {
-      padding: 1rem;
       color: #991b1b;
-      background: #fee2e2;
-      border: 1px solid #fecaca;
-      border-radius: 0.5rem;
+    }
+
+    @media (max-width: 900px) {
+      main {
+        display: block;
+      }
+
+      #research-panel {
+        position: fixed;
+        inset: 0;
+        z-index: 10;
+        max-height: none;
+        border-radius: 0;
+      }
     }
   </style>
 </head>
@@ -130,8 +162,16 @@
   </header>
 
   <main>
-    <p id="status">Loading feed…</p>
-    <section id="feed" aria-live="polite"></section>
+    <div>
+      <p id="status">Loading feed…</p>
+      <section id="feed"></section>
+    </div>
+
+    <aside id="research-panel">
+      <button id="close-panel" type="button">×</button>
+      <h2 id="research-title">Research results</h2>
+      <pre id="research-result"></pre>
+    </aside>
   </main>
 
   <script>
@@ -143,44 +183,116 @@
 
     const feedElement = document.querySelector("#feed");
     const statusElement = document.querySelector("#status");
+    const panelElement = document.querySelector("#research-panel");
+    const panelTitle = document.querySelector("#research-title");
+    const panelResult = document.querySelector("#research-result");
+    const items = new Map();
 
     function formatDate(value) {
       const date = new Date(value);
 
-      if (Number.isNaN(date.getTime())) {
-        return "Unknown publication date";
-      }
-
-      return new Intl.DateTimeFormat(undefined, {
-        dateStyle: "medium",
-        timeStyle: "short"
-      }).format(date);
+      return Number.isNaN(date.getTime())
+        ? "Unknown publication date"
+        : new Intl.DateTimeFormat(undefined, {
+            dateStyle: "medium",
+            timeStyle: "short"
+          }).format(date);
     }
 
-    async function requestResearch(item, button) {
-      button.disabled = true;
-      button.textContent = "Requesting…";
+    async function request(url, options) {
+      const response = await fetch(url, options);
+      const data = await response.json();
 
-      try {
-        const response = await fetch(RESEARCH_URL, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({
-            item_id: item.id
-          })
-        });
+      if (!response.ok) {
+        throw new Error(data.message || data.error || `HTTP ${response.status}`);
+      }
 
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}`);
+      return data;
+    }
+
+    async function getResearch(itemId) {
+      return request(
+        `${RESEARCH_URL}?item_id=${encodeURIComponent(itemId)}`,
+        { cache: "no-store" }
+      );
+    }
+
+    async function queueResearch(itemId) {
+      return request(RESEARCH_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          item_id: itemId
+        })
+      });
+    }
+
+    function updateItem(itemId, data) {
+      const view = items.get(itemId);
+
+      if (!view) {
+        return;
+      }
+
+      view.status = String(data.status || "NOT_REQUESTED").toUpperCase();
+
+      if (data.result) {
+        view.result = data.result;
+      }
+
+      if (view.status === "QUEUED") {
+        view.button.textContent = "Research queued";
+        view.button.disabled = true;
+        view.message.textContent = "Waiting to start.";
+      } else if (view.status === "PROCESSING") {
+        view.button.textContent = "Research in progress";
+        view.button.disabled = true;
+        view.message.textContent = "Research is running.";
+      } else if (view.status === "COMPLETE") {
+        view.button.textContent = "Tell me more";
+        view.button.disabled = false;
+        view.message.textContent = "Research complete.";
+      } else if (view.status.startsWith("FAILED")) {
+        view.button.textContent = "Try again";
+        view.button.disabled = false;
+        view.message.textContent = data.error || "Research failed.";
+      } else {
+        view.button.textContent = "Tell me more";
+        view.button.disabled = false;
+        view.message.textContent = "";
+      }
+    }
+
+    function showResult(item, result) {
+      panelTitle.textContent = item.title;
+      panelResult.textContent = JSON.stringify(result, null, 2);
+      panelElement.classList.add("open");
+    }
+
+    async function handleResearch(item) {
+      const view = items.get(item.id);
+
+      if (view.status === "COMPLETE") {
+        if (!view.result) {
+          updateItem(item.id, await getResearch(item.id));
         }
 
-        button.textContent = "Research queued";
+        showResult(item, view.result);
+        return;
+      }
+
+      view.button.disabled = true;
+      view.button.textContent = "Requesting…";
+
+      try {
+        updateItem(item.id, await queueResearch(item.id));
       } catch (error) {
-        console.error("Research request failed:", error);
-        button.textContent = "Try again";
-        button.disabled = false;
+        view.button.disabled = false;
+        view.button.textContent = "Try again";
+        view.message.textContent = error.message;
+        view.message.className = "research-status error";
       }
     }
 
@@ -188,70 +300,74 @@
       const article = document.createElement("article");
       article.className = "feed-item";
 
-      const title = document.createElement("h2");
-      title.textContent = item.title || "Untitled article";
+      article.innerHTML = `
+        <h2></h2>
+        <div class="metadata"></div>
+        <p class="description"></p>
+        <div class="actions">
+          <a class="button secondary" target="_blank" rel="noopener noreferrer">
+            Read original
+          </a>
+          <button class="button" type="button" disabled>
+            Checking…
+          </button>
+          <span class="research-status"></span>
+        </div>
+      `;
 
-      const metadata = document.createElement("div");
-      metadata.className = "metadata";
-      metadata.textContent =
-        `${item.source || "Unknown source"} · ` +
-        formatDate(item.published_at);
+      article.querySelector("h2").textContent =
+        item.title || "Untitled article";
 
-      const description = document.createElement("p");
-      description.textContent =
+      article.querySelector(".metadata").textContent =
+        `${item.source || "Unknown source"} · ${formatDate(item.published_at)}`;
+
+      article.querySelector(".description").textContent =
         item.description || "No description was provided.";
 
-      const actions = document.createElement("div");
-      actions.className = "actions";
+      article.querySelector("a").href = item.url;
 
-      const originalLink = document.createElement("a");
-      originalLink.className = "button secondary";
-      originalLink.textContent = "Read original";
-      originalLink.href = item.url;
-      originalLink.target = "_blank";
-      originalLink.rel = "noopener noreferrer";
+      const button = article.querySelector("button");
+      const message = article.querySelector(".research-status");
 
-      const researchButton = document.createElement("button");
-      researchButton.className = "button";
-      researchButton.type = "button";
-      researchButton.textContent = "Tell me more";
-      researchButton.disabled = !item.id;
+      button.addEventListener("click", () => handleResearch(item));
 
-      researchButton.addEventListener("click", () => {
-        requestResearch(item, researchButton);
+      items.set(item.id, {
+        item,
+        button,
+        message,
+        status: "CHECKING",
+        result: null
       });
-
-      actions.append(originalLink, researchButton);
-      article.append(title, metadata, description, actions);
 
       return article;
     }
 
+    async function refreshStatuses() {
+      await Promise.allSettled(
+        [...items.keys()].map(async itemId => {
+          try {
+            updateItem(itemId, await getResearch(itemId));
+          } catch (error) {
+            const view = items.get(itemId);
+            view.button.disabled = false;
+            view.button.textContent = "Tell me more";
+            view.message.textContent = error.message;
+          }
+        })
+      );
+    }
+
     async function loadFeed() {
-      statusElement.textContent = "Requesting feed…";
-
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 15000);
-
       try {
         const response = await fetch(FEED_URL, {
-          cache: "no-store",
-          signal: controller.signal
+          cache: "no-store"
         });
 
         if (!response.ok) {
-          throw new Error(
-            `CloudFront returned HTTP ${response.status}`
-          );
+          throw new Error(`HTTP ${response.status}`);
         }
 
         const data = await response.json();
-
-        if (!Array.isArray(data.items)) {
-          throw new Error(
-            "The returned JSON does not contain an items array."
-          );
-        }
 
         feedElement.replaceChildren(
           ...data.items.map(createFeedItem)
@@ -260,24 +376,20 @@
         statusElement.textContent =
           `${data.items.length} item(s) loaded. ` +
           `Feed updated ${formatDate(data.updated_at)}.`;
+
+        await refreshStatuses();
+        setInterval(refreshStatuses, 5000);
       } catch (error) {
-        console.error("Feed loading failed:", error);
-
         statusElement.textContent = "Feed unavailable.";
-
-        const message = document.createElement("div");
-        message.className = "error";
-        message.textContent =
-          `The feed could not be loaded: ${error.message}`;
-
-        feedElement.replaceChildren(message);
-      } finally {
-        clearTimeout(timeoutId);
+        feedElement.textContent = error.message;
       }
     }
+
+    document.querySelector("#close-panel").addEventListener("click", () => {
+      panelElement.classList.remove("open");
+    });
 
     loadFeed();
   </script>
 </body>
 </html>
-```
