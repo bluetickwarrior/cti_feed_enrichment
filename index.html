@@ -2,194 +2,144 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Threat Intelligence Feed</title>
 
   <style>
-    :root {
-      font-family: Inter, system-ui, sans-serif;
-      color: #1f2937;
-      background: #f3f4f6;
+    *{box-sizing:border-box}
+    body{margin:0;font-family:system-ui,sans-serif;color:#1f2937;background:#f3f4f6}
+    header{padding:2rem 1rem;color:#fff;background:#111827}
+    header div,main{width:min(1400px,calc(100% - 2rem));margin:auto}
+    h1{margin:0 0 .5rem}
+    header p{margin:0;color:#d1d5db}
+
+    main{
+      display:grid;
+      grid-template-columns:minmax(0,900px);
+      justify-content:center;
+      gap:1rem;
+      padding:2rem 0;
     }
 
-    * {
-      box-sizing: border-box;
+    main.panel-open{
+      grid-template-columns:190px minmax(0,1fr);
+      justify-content:stretch;
     }
 
-    body {
-      margin: 0;
+    #feed{display:grid;gap:1rem}
+    #status{margin-top:0;color:#4b5563}
+
+    .feed-item,#research-panel{
+      padding:1.25rem;
+      background:#fff;
+      border:1px solid #d1d5db;
+      border-radius:.75rem;
     }
 
-    header {
-      padding: 2rem 1rem;
-      color: white;
-      background: #111827;
+    .feed-item h2{margin:0 0 .5rem;font-size:1.2rem}
+    .metadata,.research-status{font-size:.9rem;color:#6b7280}
+
+    .actions{
+      display:flex;
+      flex-wrap:wrap;
+      align-items:center;
+      gap:.75rem;
+      margin-top:1rem;
     }
 
-    header div,
-    main {
-      width: min(1400px, calc(100% - 2rem));
-      margin: 0 auto;
+    .button{
+      padding:.65rem 1rem;
+      border:0;
+      border-radius:.5rem;
+      color:#fff;
+      background:#1f2937;
+      font:inherit;
+      font-weight:600;
+      text-align:center;
+      text-decoration:none;
+      cursor:pointer;
     }
 
-    h1 {
-      margin: 0 0 0.5rem;
+    .button.secondary{color:#1f2937;background:#e5e7eb}
+    .button:disabled{opacity:.55;cursor:not-allowed}
+
+    #research-panel{
+      display:none;
+      position:sticky;
+      top:1rem;
+      align-self:start;
+      width:100%;
+      max-height:calc(100vh - 2rem);
+      overflow:auto;
     }
 
-    header p {
-      margin: 0;
-      color: #d1d5db;
+    #research-panel.open{display:block}
+
+    #close-panel{
+      float:right;
+      padding:0;
+      border:0;
+      background:none;
+      font-size:1.75rem;
+      cursor:pointer;
     }
 
-    main {
-      display: grid;
-      grid-template-columns: minmax(0, 900px);
-      justify-content: center;
-      gap: 1.5rem;
-      padding: 2rem 0;
+    #research-title{margin-top:0;padding-right:2rem}
+
+    .research-field{
+      margin:1rem 0;
+      padding:1rem;
+      background:#f9fafb;
+      border:1px solid #e5e7eb;
+      border-radius:.5rem;
     }
 
-    main.panel-open {
-      grid-template-columns: minmax(0, 900px) minmax(320px, 460px);
-      justify-content: center;
+    .research-field h3{margin:0 0 .5rem}
+    .research-field p{margin:.4rem 0;line-height:1.5}
+    .research-field blockquote{
+      margin:.75rem 0;
+      padding-left:.75rem;
+      color:#4b5563;
+      border-left:3px solid #d1d5db;
     }
 
-    #status {
-      margin-top: 0;
-      color: #4b5563;
+    .research-field a{color:#1d4ed8;overflow-wrap:anywhere}
+
+    main.panel-open #status,
+    main.panel-open .description,
+    main.panel-open .metadata,
+    main.panel-open .research-status,
+    main.panel-open .button.secondary{
+      display:none;
     }
 
-    #feed {
-      display: grid;
-      gap: 1rem;
+    main.panel-open .feed-item{padding:.75rem}
+    main.panel-open .feed-item h2{
+      margin:0;
+      font-size:.85rem;
+      line-height:1.3;
     }
 
-    .feed-item,
-    #research-panel {
-      padding: 1.25rem;
-      background: white;
-      border: 1px solid #d1d5db;
-      border-radius: 0.75rem;
+    main.panel-open .actions{
+      display:block;
+      margin-top:.65rem;
     }
 
-    .feed-item h2 {
-      margin: 0 0 0.5rem;
-      font-size: 1.2rem;
+    main.panel-open .actions .button{
+      width:100%;
+      padding:.5rem;
+      font-size:.75rem;
     }
 
-    .metadata,
-    .research-status {
-      color: #6b7280;
-      font-size: 0.9rem;
-    }
-
-    .actions {
-      display: flex;
-      align-items: center;
-      flex-wrap: wrap;
-      gap: 0.75rem;
-      margin-top: 1rem;
-    }
-
-    .button {
-      padding: 0.65rem 1rem;
-      color: white;
-      background: #1f2937;
-      border: 0;
-      border-radius: 0.5rem;
-      font: inherit;
-      font-weight: 600;
-      text-decoration: none;
-      cursor: pointer;
-    }
-
-    .button.secondary {
-      color: #1f2937;
-      background: #e5e7eb;
-    }
-
-    .button:disabled {
-      cursor: not-allowed;
-      opacity: 0.55;
-    }
-
-    #research-panel {
-      display: none;
-      position: sticky;
-      top: 1rem;
-      align-self: start;
-      max-height: calc(100vh - 2rem);
-      overflow-y: auto;
-    }
-
-    #research-panel.open {
-      display: block;
-    }
-
-    #close-panel {
-      float: right;
-      border: 0;
-      background: none;
-      font-size: 1.5rem;
-      cursor: pointer;
-    }
-
-    #research-panel h2 {
-      margin-top: 0;
-      padding-right: 2rem;
-    }
-
-    #research-panel h3 {
-      margin: 1.5rem 0 0.5rem;
-    }
-
-    .research-field {
-      margin-bottom: 1rem;
-      padding: 0.75rem;
-      background: #f9fafb;
-      border: 1px solid #e5e7eb;
-      border-radius: 0.5rem;
-    }
-
-    .research-field h4 {
-      margin: 0 0 0.4rem;
-    }
-
-    .research-field p {
-      margin: 0.35rem 0;
-      line-height: 1.5;
-    }
-
-    .research-field blockquote {
-      margin: 0.5rem 0;
-      padding-left: 0.75rem;
-      color: #4b5563;
-      border-left: 3px solid #d1d5db;
-    }
-
-    .research-field a {
-      color: #1d4ed8;
-      overflow-wrap: anywhere;
-    }
-
-    .error {
-      color: #991b1b;
-    }
-
-    @media (max-width: 1000px) {
-      main,
-      main.panel-open {
-        display: block;
-        width: min(900px, calc(100% - 2rem));
-      }
-
-      #research-panel.open {
-        position: fixed;
-        inset: 0;
-        z-index: 10;
-        max-height: none;
-        border: 0;
-        border-radius: 0;
+    @media(max-width:800px){
+      main,main.panel-open{display:block}
+      #research-panel.open{
+        position:fixed;
+        inset:0;
+        z-index:10;
+        max-height:none;
+        border:0;
+        border-radius:0;
       }
     }
   </style>
@@ -217,369 +167,298 @@
   </main>
 
   <script>
-    const FEED_URL =
-      "https://d2c8564e9x1krw.cloudfront.net/feed/feed.json?v=2";
+    const FEED_URL="https://d2c8564e9x1krw.cloudfront.net/feed/feed.json?v=2";
+    const RESEARCH_URL="https://eabcv2ra8b.execute-api.ap-southeast-1.amazonaws.com/research";
 
-    const RESEARCH_URL =
-      "https://eabcv2ra8b.execute-api.ap-southeast-1.amazonaws.com/research";
+    const main=document.querySelector("#main");
+    const feed=document.querySelector("#feed");
+    const status=document.querySelector("#status");
+    const panel=document.querySelector("#research-panel");
+    const panelTitle=document.querySelector("#research-title");
+    const panelResult=document.querySelector("#research-result");
+    const views=new Map();
 
-    const main = document.querySelector("#main");
-    const feed = document.querySelector("#feed");
-    const status = document.querySelector("#status");
-    const panel = document.querySelector("#research-panel");
-    const panelTitle = document.querySelector("#research-title");
-    const panelResult = document.querySelector("#research-result");
-    const views = new Map();
+    let openItemId=null;
 
-    let openItemId = null;
-
-    function formatDate(value) {
-      const date = new Date(value);
-
+    function formatDate(value){
+      const date=new Date(value);
       return Number.isNaN(date.getTime())
-        ? "Unknown publication date"
-        : new Intl.DateTimeFormat(undefined, {
-            dateStyle: "medium",
-            timeStyle: "short"
-          }).format(date);
+        ?"Unknown publication date"
+        :date.toLocaleString();
     }
 
-    function label(value) {
-      return String(value)
-        .replaceAll("_", " ")
-        .replace(/\b\w/g, character => character.toUpperCase());
+    function label(value){
+      return String(value).replaceAll("_"," ").replace(/\b\w/g,c=>c.toUpperCase());
     }
 
-    async function api(itemId, method = "GET") {
-      const response = await fetch(
-        method === "GET"
-          ? `${RESEARCH_URL}?item_id=${encodeURIComponent(itemId)}`
-          : RESEARCH_URL,
-        method === "GET"
-          ? { cache: "no-store" }
-          : {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json"
-              },
-              body: JSON.stringify({
-                item_id: itemId
-              })
+    async function api(itemId,method="GET"){
+      const response=await fetch(
+        method==="GET"
+          ?`${RESEARCH_URL}?item_id=${encodeURIComponent(itemId)}`
+          :RESEARCH_URL,
+        method==="GET"
+          ?{cache:"no-store"}
+          :{
+              method:"POST",
+              headers:{"Content-Type":"application/json"},
+              body:JSON.stringify({item_id:itemId})
             }
       );
 
-      const data = await response.json();
+      const data=await response.json();
 
-      if (!response.ok) {
-        throw new Error(
-          data.message || data.error || `HTTP ${response.status}`
-        );
+      if(!response.ok){
+        throw new Error(data.message||data.error||`HTTP ${response.status}`);
       }
 
       return data;
     }
 
-    function updateView(itemId, data) {
-      const view = views.get(itemId);
+    function updateView(itemId,data){
+      const view=views.get(itemId);
+      if(!view)return;
 
-      if (!view) {
-        return;
+      view.status=String(data.status||"NOT_REQUESTED").toUpperCase();
+
+      if(data.result){
+        view.result=data.result;
       }
 
-      view.status = String(
-        data.status || "NOT_REQUESTED"
-      ).toUpperCase();
-
-      if (data.result) {
-        view.result = data.result;
-      }
-
-      if (view.status === "QUEUED") {
-        view.button.textContent = "Research queued";
-        view.button.disabled = true;
-        view.message.textContent = "Waiting to start.";
-      } else if (view.status === "PROCESSING") {
-        view.button.textContent = "Research in progress";
-        view.button.disabled = true;
-        view.message.textContent = "Research is running.";
-      } else if (view.status === "COMPLETE") {
-        view.button.textContent = "Tell me more";
-        view.button.disabled = false;
-        view.message.textContent = "Research complete.";
-      } else if (view.status.startsWith("FAILED")) {
-        view.button.textContent = "Try again";
-        view.button.disabled = false;
-        view.message.textContent = data.error || "Research failed.";
-      } else {
-        view.button.textContent = "Tell me more";
-        view.button.disabled = false;
-        view.message.textContent = "";
+      if(view.status==="QUEUED"){
+        view.button.textContent="Research queued";
+        view.button.disabled=true;
+        view.message.textContent="Waiting to start.";
+      }else if(view.status==="PROCESSING"){
+        view.button.textContent="Research in progress";
+        view.button.disabled=true;
+        view.message.textContent="Research is running.";
+      }else if(view.status==="COMPLETE"){
+        view.button.textContent="Tell me more";
+        view.button.disabled=false;
+        view.message.textContent="Research complete.";
+      }else if(view.status.startsWith("FAILED")){
+        view.button.textContent="Try again";
+        view.button.disabled=false;
+        view.message.textContent=data.error||"Research failed.";
+      }else{
+        view.button.textContent="Tell me more";
+        view.button.disabled=false;
+        view.message.textContent="";
       }
     }
 
-    function addText(parent, heading, value) {
-      const section = document.createElement("section");
-      const title = document.createElement("h3");
-      const text = document.createElement("p");
+    function addSection(title,value){
+      const section=document.createElement("section");
+      section.className="research-field";
 
-      title.textContent = heading;
-      text.textContent = value || "Not provided.";
+      const heading=document.createElement("h3");
+      heading.textContent=title;
 
-      section.append(title, text);
-      parent.append(section);
+      const text=document.createElement("p");
+      text.textContent=value||"Not provided.";
+
+      section.append(heading,text);
+      panelResult.append(section);
     }
 
-    function renderResult(item, storedResult) {
-      const documentResult = storedResult || {};
-      const result = documentResult.result || documentResult;
-      const identity = result.identity || {};
-      const fields = Array.isArray(result.fields)
-        ? Object.fromEntries(
-            result.fields.map(field => [field.name, field])
-          )
-        : result.fields || {};
+    function renderResult(item,storedResult){
+      const result=storedResult?.result||storedResult||{};
+      const identity=result.identity||{};
+      const fields=Array.isArray(result.fields)
+        ?result.fields
+        :Object.entries(result.fields||{}).map(([name,value])=>({
+            name,
+            ...(typeof value==="object"&&value!==null?value:{value})
+          }));
 
-      panelTitle.textContent = item.title || "Research results";
+      panelTitle.textContent=item.title||"Research results";
       panelResult.replaceChildren();
 
-      addText(
-        panelResult,
-        "Summary",
-        result.summary
-      );
+      addSection("Article type",label(result.article_type||"Unknown"));
 
-      addText(
-        panelResult,
-        "Article type",
-        label(result.article_type || "unknown")
-      );
-
-      addText(
-        panelResult,
+      addSection(
         "Identity",
         [
-          `CVEs: ${(identity.cve_ids || []).join(", ") || "None identified"}`,
-          `Vendors: ${(identity.vendors || []).join(", ") || "None identified"}`,
-          `Products: ${(identity.products || []).join(", ") || "None identified"}`
+          `CVEs: ${(identity.cve_ids||[]).join(", ")||"None identified"}`,
+          `Vendors: ${(identity.vendors||[]).join(", ")||"None identified"}`,
+          `Products: ${(identity.products||[]).join(", ")||"None identified"}`
         ].join("\n")
       );
 
-      const fieldsTitle = document.createElement("h3");
-      fieldsTitle.textContent = "Key findings";
-      panelResult.append(fieldsTitle);
+      for(const field of fields){
+        const section=document.createElement("section");
+        section.className="research-field";
 
-      for (const [name, field] of Object.entries(fields)) {
-        const box = document.createElement("div");
-        const heading = document.createElement("h4");
-        const answer = document.createElement("p");
-        const fieldStatus = document.createElement("p");
+        const heading=document.createElement("h3");
+        heading.textContent=label(field.name||"Field");
 
-        box.className = "research-field";
-        heading.textContent = label(name);
-        answer.textContent =
-          `Answer: ${
-            field.value === null ||
-            field.value === undefined ||
-            field.value === ""
-              ? "No answer found"
-              : String(field.value)
-          }`;
-        fieldStatus.textContent =
-          `Status: ${label(field.status || "unknown")}`;
+        const value=document.createElement("p");
+        value.textContent=field.value??"No answer found.";
 
-        box.append(heading, answer, fieldStatus);
+        section.append(heading,value);
 
-        if (field.notes) {
-          const notes = document.createElement("p");
-          notes.textContent = `Notes: ${field.notes}`;
-          box.append(notes);
+        if(field.status){
+          const fieldStatus=document.createElement("p");
+          fieldStatus.textContent=`Status: ${label(field.status)}`;
+          section.append(fieldStatus);
         }
 
-        for (const evidence of field.evidence || []) {
-          const quote = document.createElement("blockquote");
-          const source = document.createElement("a");
-
-          quote.textContent = evidence.quote || "";
-          source.textContent =
-            evidence.source_title ||
-            evidence.source_url ||
-            "Source";
-          source.href = evidence.source_url;
-          source.target = "_blank";
-          source.rel = "noopener noreferrer";
-
-          box.append(quote, source);
+        if(field.notes){
+          const notes=document.createElement("p");
+          notes.textContent=`Notes: ${field.notes}`;
+          section.append(notes);
         }
 
-        panelResult.append(box);
+        for(const evidence of field.evidence||[]){
+          if(evidence.quote){
+            const quote=document.createElement("blockquote");
+            quote.textContent=evidence.quote;
+            section.append(quote);
+          }
+
+          if(evidence.source_url){
+            const source=document.createElement("a");
+            source.href=evidence.source_url;
+            source.target="_blank";
+            source.rel="noopener noreferrer";
+            source.textContent=evidence.source_title||"View source";
+            section.append(source);
+          }
+        }
+
+        panelResult.append(section);
       }
 
-      addText(
-        panelResult,
-        "Limitations",
-        (result.limitations || []).join("\n") ||
-          "No limitations were recorded."
-      );
+      if(result.limitations?.length){
+        addSection("Limitations",result.limitations.join("\n"));
+      }
 
-      addText(
-        panelResult,
-        "Conflicting information",
-        (result.conflicts || [])
-          .map(conflict =>
-            `${label(conflict.field)}: ${
-              conflict.notes || "Conflicting evidence was found."
-            }`
-          )
-          .join("\n") ||
-          "No conflicting information was found."
-      );
+      if(result.conflicts?.length){
+        addSection(
+          "Conflicts",
+          result.conflicts
+            .map(conflict=>`${label(conflict.field||"Field")}: ${conflict.notes||"Conflicting information found."}`)
+            .join("\n")
+        );
+      }
 
       panel.classList.add("open");
       main.classList.add("panel-open");
-      openItemId = item.id;
+      openItemId=item.id;
     }
 
-    function closePanel() {
+    function closePanel(){
       panel.classList.remove("open");
       main.classList.remove("panel-open");
-      openItemId = null;
+      openItemId=null;
     }
 
-    async function handleResearch(item) {
-      const view = views.get(item.id);
+    async function handleResearch(item){
+      const view=views.get(item.id);
 
-      if (view.status === "COMPLETE") {
-        if (openItemId === item.id) {
+      if(view.status==="COMPLETE"){
+        if(openItemId===item.id){
           closePanel();
           return;
         }
 
-        if (!view.result) {
-          updateView(item.id, await api(item.id));
+        if(!view.result){
+          updateView(item.id,await api(item.id));
         }
 
-        renderResult(item, view.result);
+        renderResult(item,view.result);
         return;
       }
 
-      view.button.disabled = true;
-      view.button.textContent = "Requesting…";
+      view.button.disabled=true;
+      view.button.textContent="Requesting…";
 
-      try {
-        updateView(item.id, await api(item.id, "POST"));
-      } catch (error) {
-        view.button.disabled = false;
-        view.button.textContent = "Try again";
-        view.message.textContent = error.message;
-        view.message.className = "research-status error";
+      try{
+        updateView(item.id,await api(item.id,"POST"));
+      }catch(error){
+        view.button.disabled=false;
+        view.button.textContent="Try again";
+        view.message.textContent=error.message;
       }
     }
 
-    function createFeedItem(item) {
-      const article = document.createElement("article");
+    function createFeedItem(item){
+      const article=document.createElement("article");
+      article.className="feed-item";
 
-      article.className = "feed-item";
-      article.innerHTML = `
+      article.innerHTML=`
         <h2></h2>
         <div class="metadata"></div>
         <p class="description"></p>
         <div class="actions">
-          <a
-            class="button secondary"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read original
-          </a>
-          <button class="button" type="button" disabled>
-            Checking…
-          </button>
+          <a class="button secondary" target="_blank" rel="noopener noreferrer">Read original</a>
+          <button class="button" type="button" disabled>Checking…</button>
           <span class="research-status"></span>
         </div>
       `;
 
-      article.querySelector("h2").textContent =
-        item.title || "Untitled article";
+      article.querySelector("h2").textContent=item.title||"Untitled article";
+      article.querySelector(".metadata").textContent=
+        `${item.source||"Unknown source"} · ${formatDate(item.published_at)}`;
+      article.querySelector(".description").textContent=
+        item.description||"No description provided.";
+      article.querySelector("a").href=item.url||"#";
 
-      article.querySelector(".metadata").textContent =
-        `${item.source || "Unknown source"} · ` +
-        formatDate(item.published_at);
+      const button=article.querySelector("button");
+      const message=article.querySelector(".research-status");
 
-      article.querySelector(".description").textContent =
-        item.description || "No description was provided.";
+      button.addEventListener("click",()=>handleResearch(item));
 
-      article.querySelector("a").href = item.url;
-
-      const button = article.querySelector("button");
-      const message = article.querySelector(".research-status");
-
-      button.addEventListener("click", () => {
-        handleResearch(item);
-      });
-
-      views.set(item.id, {
+      views.set(item.id,{
         item,
         button,
         message,
-        status: "CHECKING",
-        result: null
+        status:"CHECKING",
+        result:null
       });
 
       return article;
     }
 
-    async function refreshStatuses() {
-      for (const [itemId, view] of views) {
-        if (
-          view.status !== "CHECKING" &&
-          view.status !== "QUEUED" &&
-          view.status !== "PROCESSING"
-        ) {
+    async function refreshStatuses(){
+      for(const [itemId,view] of views){
+        if(!["CHECKING","QUEUED","PROCESSING"].includes(view.status)){
           continue;
         }
 
-        try {
-          updateView(itemId, await api(itemId));
-        } catch (error) {
-          view.button.disabled = false;
-          view.button.textContent = "Tell me more";
-          view.message.textContent = error.message;
+        try{
+          updateView(itemId,await api(itemId));
+        }catch(error){
+          view.button.disabled=false;
+          view.button.textContent="Tell me more";
+          view.message.textContent=error.message;
         }
       }
     }
 
-    async function loadFeed() {
-      try {
-        const response = await fetch(FEED_URL, {
-          cache: "no-store"
-        });
+    async function loadFeed(){
+      try{
+        const response=await fetch(FEED_URL,{cache:"no-store"});
 
-        if (!response.ok) {
+        if(!response.ok){
           throw new Error(`HTTP ${response.status}`);
         }
 
-        const data = await response.json();
+        const data=await response.json();
+        const items=data.items||[];
 
-        feed.replaceChildren(
-          ...data.items.map(createFeedItem)
-        );
-
-        status.textContent =
-          `${data.items.length} item(s) loaded. ` +
-          `Feed updated ${formatDate(data.updated_at)}.`;
+        feed.replaceChildren(...items.map(createFeedItem));
+        status.textContent=`${items.length} item(s) loaded. Feed updated ${formatDate(data.updated_at)}.`;
 
         await refreshStatuses();
-        setInterval(refreshStatuses, 20000);
-      } catch (error) {
-        status.textContent = "Feed unavailable.";
-        feed.textContent = error.message;
+        setInterval(refreshStatuses,20000);
+      }catch(error){
+        status.textContent="Feed unavailable.";
+        feed.textContent=error.message;
       }
     }
 
-    document
-      .querySelector("#close-panel")
-      .addEventListener("click", closePanel);
-
+    document.querySelector("#close-panel").addEventListener("click",closePanel);
     loadFeed();
   </script>
 </body>
