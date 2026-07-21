@@ -116,7 +116,8 @@
       border-top: 1px solid var(--line);
     }
 
-    .vulnerability-group + .vulnerability-group {
+
+    .recent-vulnerability-group {
       margin-top: 28px;
     }
 
@@ -464,7 +465,7 @@
         <div id="latest-vulnerability-list"></div>
       </section>
 
-      <section class="vulnerability-group">
+      <section class="vulnerability-group recent-vulnerability-group">
         <h2 class="index-title">Recent Vulnerabilities</h2>
         <div id="recent-vulnerability-list"></div>
       </section>
@@ -475,18 +476,34 @@
       <div id="feed"></div>
     </section>
 
+    <aside id="research-panel">
+      <div class="panel-header">
+        <button id="close-panel" type="button" aria-label="Close research panel">×</button>
+        <h2 id="research-title">Research results</h2>
+      </div>
 
+      <div id="research-result"></div>
+    </aside>
   </main>
 
   <script>
     const FEED_URL =
       "https://d2c8564e9x1krw.cloudfront.net/feed/feed.json?v=2";
 
+    const RESEARCH_URL =
+      "https://eabcv2ra8b.execute-api.ap-southeast-1.amazonaws.com/research";
+
     const main = document.querySelector("#main");
     const feed = document.querySelector("#feed");
     const latestVulnerabilityList = document.querySelector("#latest-vulnerability-list");
     const recentVulnerabilityList = document.querySelector("#recent-vulnerability-list");
     const status = document.querySelector("#status");
+    const panel = document.querySelector("#research-panel");
+    const panelTitle = document.querySelector("#research-title");
+    const panelResult = document.querySelector("#research-result");
+    const views = new Map();
+
+    let openItemId = null;
 
     function formatDate(value) {
       const date = new Date(value);
@@ -499,11 +516,314 @@
           });
     }
 
+    function label(value) {
+      return String(value || "")
+        .replaceAll("_", " ")
+        .replace(/\b\w/g, character => character.toUpperCase());
+    }
+
+    function displayValue(value) {
+      if (value === null || value === undefined || value === "") {
+        return "No answer found.";
+      }
+
+      if (typeof value === "boolean") {
+        return value ? "Yes" : "No";
+      }
+
+      if (Array.isArray(value)) {
+        return value.length ? value.join(", ") : "None identified.";
+      }
+
+      if (typeof value === "object") {
+        return JSON.stringify(value, null, 2);
+      }
+
+      return String(value);
+    }
+
+    function encodeTextFragment(value) {
+      return encodeURIComponent(value)
+        .replace(/-/g, "%2D")
+        .replace(/&/g, "%26")
+        .replace(/,/g, "%2C");
+    }
+
+    function highlightedSourceUrl(url, quote) {
+      if (!quote) return url;
+      return `${url.split("#")[0]}#:~:text=${encodeTextFragment(quote.trim())}`;
+    }
+
+    async function api(itemId) {
+      const response = await fetch(
+        `${RESEARCH_URL}?item_id=${encodeURIComponent(itemId)}`,
+        { cache: "no-store" }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data.message || data.error || `HTTP ${response.status}`
+        );
+      }
+
+      return data;
+    }
+
+    function updateView(itemId, data) {
+      const view = views.get(itemId);
+
+      if (!view) {
+        return;
+      }
+
+      view.status = String(
+        data.status || data.research_status || "NOT_REQUESTED"
+      ).toUpperCase();
+
+      if (data.result) {
+        view.result = data.result;
+      }
+
+      const available = view.status === "COMPLETE" && Boolean(view.result || data.result);
+
+      view.button.textContent = available
+        ? "View vulnerability data"
+        : "Vulnerability data unavailable";
+      view.button.disabled = !available;
+      view.message.textContent = available ? "" : "No completed vulnerability data is available.";
+    }
+
+    function addSection(title, value, statusValue, notes, evidence = []) {
+      const section = document.createElement("section");
+      const heading = document.createElement("h3");
+      const content = document.createElement("div");
+      const text = document.createElement("p");
+
+      section.className = "research-section";
+      content.className = "research-content";
+
+      heading.textContent = title;
+      text.textContent = displayValue(value);
+
+      content.append(text);
+
+      if (statusValue) {
+        const fieldStatus = document.createElement("p");
+
+        fieldStatus.className = "field-status";
+        fieldStatus.textContent = `Status: ${label(statusValue)}`;
+
+        content.append(fieldStatus);
+      }
+
+      if (notes) {
+        const fieldNotes = document.createElement("p");
+
+        fieldNotes.className = "field-notes";
+        fieldNotes.textContent = notes;
+
+        content.append(fieldNotes);
+      }
+
+      for (const item of evidence) {
+        const evidenceBlock = document.createElement("div");
+
+        evidenceBlock.className = "evidence";
+
+        if (item.quote) {
+          const quote = document.createElement("blockquote");
+
+          quote.textContent = item.quote;
+          evidenceBlock.append(quote);
+        }
+
+        if (item.source_url) {
+          const source = document.createElement("a");
+
+          source.href = highlightedSourceUrl(item.source_url, item.quote);
+          source.target = "_blank";
+          source.rel = "noopener noreferrer";
+          source.textContent =
+            item.source_title || "Open source";
+
+          evidenceBlock.append(source);
+        }
+
+        content.append(evidenceBlock);
+      }
+
+      section.append(heading, content);
+      panelResult.append(section);
+    }
+
+    function renderResult(item, storedResult, updateUrl = true) {
+      const result =
+        storedResult?.result || storedResult || {};
+
+      const identity = result.identity || {};
+
+      const fields = Array.isArray(result.fields)
+        ? result.fields
+        : Object.entries(result.fields || {}).map(
+            ([name, field]) => ({
+              name,
+              ...(typeof field === "object" && field !== null
+                ? field
+                : { value: field })
+            })
+          );
+
+      panelTitle.textContent =
+        item.title || "Research results";
+
+      panelResult.replaceChildren();
+
+      addSection(
+        "Article type",
+        label(result.article_type || "Unknown")
+      );
+
+      addSection(
+        "Identity",
+        [
+          `CVEs: ${displayValue(identity.cve_ids || [])}`,
+          `Vendors: ${displayValue(identity.vendors || [])}`,
+          `Products: ${displayValue(identity.products || [])}`
+        ].join("\n")
+      );
+
+      for (const field of fields) {
+        addSection(
+          label(field.name || "Finding"),
+          field.value,
+          field.status,
+          field.notes,
+          field.evidence || []
+        );
+      }
+
+      if (result.limitations?.length) {
+        addSection(
+          "Limitations",
+          result.limitations.join("\n")
+        );
+      }
+
+      if (result.conflicts?.length) {
+        addSection(
+          "Conflicting information",
+          result.conflicts
+            .map(
+              conflict =>
+                `${label(conflict.field || "Finding")}: ${
+                  conflict.notes ||
+                  "Conflicting evidence was found."
+                }`
+            )
+            .join("\n")
+        );
+      }
+
+      for (const view of views.values()) {
+        const active = view.item.id === item.id;
+        view.article.classList.toggle("active", active);
+        view.indexLink?.classList.toggle("active", active);
+      }
+
+      panel.classList.add("open");
+      main.classList.add("panel-open");
+      openItemId = item.id;
+
+      if (updateUrl) {
+        const url = new URL(location.href);
+        url.searchParams.set("item_id", item.id);
+        history.pushState({ itemId: item.id }, "", url);
+      }
+    }
+
+    function closePanel(updateUrl = true) {
+      panel.classList.remove("open");
+      main.classList.remove("panel-open");
+      openItemId = null;
+
+      for (const view of views.values()) {
+        view.article.classList.remove("active");
+        view.indexLink?.classList.remove("active");
+      }
+
+      if (updateUrl) {
+        const url = new URL(location.href);
+        url.searchParams.delete("item_id");
+        history.pushState({}, "", url);
+      }
+    }
+
+    async function openItemFromUrl() {
+      const itemId = new URL(location.href).searchParams.get("item_id");
+
+      if (!itemId) {
+        closePanel(false);
+        return;
+      }
+
+      const view = views.get(itemId);
+
+      try {
+        const data = await api(itemId);
+
+        if (view) {
+          updateView(itemId, data);
+        }
+
+        if (String(data.status).toUpperCase() === "COMPLETE" && data.result) {
+          renderResult(
+            view?.item || { id: itemId, title: "Research results" },
+            data.result,
+            false
+          );
+        }
+      } catch (error) {
+        if (view) {
+          view.message.textContent = error.message;
+        }
+      }
+    }
+
+    async function openVulnerabilityData(item) {
+      const view = views.get(item.id);
+
+      if (!view) {
+        return;
+      }
+
+      if (openItemId === item.id) {
+        closePanel();
+        return;
+      }
+
+      try {
+        if (!view.result || view.status !== "COMPLETE") {
+          updateView(item.id, await api(item.id));
+        }
+
+        if (view.status === "COMPLETE" && view.result) {
+          renderResult(item, view.result);
+          return;
+        }
+
+        view.message.textContent = "No completed vulnerability data is available.";
+      } catch (error) {
+        view.message.textContent = error.message;
+        view.message.classList.add("error");
+      }
+    }
+
     function createFeedItem(item) {
       const article = document.createElement("article");
 
       article.className = "feed-item";
-      article.id = `item-${item.id}`;
 
       article.innerHTML = `
         <h2></h2>
@@ -517,6 +837,16 @@
           >
             Read original
           </a>
+
+          <button
+            class="button"
+            type="button"
+            disabled
+          >
+            Checking vulnerability data
+          </button>
+
+          <span class="research-status"></span>
         </div>
       `;
 
@@ -533,21 +863,64 @@
       article.querySelector("a").href =
         item.url || "#";
 
+      const button =
+        article.querySelector("button");
+
+      const message =
+        article.querySelector(".research-status");
+
+      button.addEventListener(
+        "click",
+        () => openVulnerabilityData(item)
+      );
+
+      views.set(item.id, {
+        item,
+        article,
+        button,
+        message,
+        status: "CHECKING",
+        result: null
+      });
+
       return article;
     }
 
     function createVulnerabilityLink(item) {
       const link = document.createElement("button");
+      const view = views.get(item.id);
 
       link.className = "vulnerability-link";
       link.type = "button";
       link.textContent = item.title || "Untitled article";
       link.addEventListener("click", () => {
-        const target = document.getElementById(`item-${item.id}`);
-        target?.scrollIntoView({ behavior: "smooth", block: "center" });
+        openVulnerabilityData(item);
       });
 
+      view.indexLink = link;
       return link;
+    }
+
+    async function refreshStatuses() {
+      for (const [itemId, view] of views) {
+        if (
+          !["CHECKING", "QUEUED", "PROCESSING"]
+            .includes(view.status)
+        ) {
+          continue;
+        }
+
+        try {
+          updateView(
+            itemId,
+            await api(itemId)
+          );
+        } catch (error) {
+          view.button.disabled = true;
+          view.button.textContent = "Vulnerability data unavailable";
+          view.message.textContent = error.message;
+        }
+      }
     }
 
     async function loadFeed() {
@@ -563,23 +936,17 @@
 
         const data = await response.json();
         const items = data.items || [];
+        const recentVulnerabilities = (data.recent_vulnerabilities || []).slice(0, 10);
 
         const latestVulnerabilities = items.filter(
           item => item.article_type === "vulnerability"
         );
 
-        const recentVulnerabilities = (
-          data.recent_vulnerabilities || []
-        )
-          .filter(item => item.article_type === "vulnerability")
-          .slice(0, 10);
-
-        const displayedItems = [
-          ...items,
-          ...recentVulnerabilities.filter(
-            recent => !items.some(item => item.id === recent.id)
-          )
-        ];
+        const currentIds = new Set(items.map(item => item.id));
+        const additionalRecentItems = recentVulnerabilities.filter(
+          item => !currentIds.has(item.id)
+        );
+        const displayedItems = [...items, ...additionalRecentItems];
 
         feed.replaceChildren(...displayedItems.map(createFeedItem));
         latestVulnerabilityList.replaceChildren(
@@ -590,9 +957,17 @@
         );
 
         status.textContent =
-          `${items.length} reports · ${latestVulnerabilities.length} latest vulnerabilities · ` +
+          `${items.length} current reports · ${latestVulnerabilities.length} latest vulnerabilities · ` +
           `${recentVulnerabilities.length} recent vulnerabilities · Updated ` +
           formatDate(data.updated_at);
+
+        await refreshStatuses();
+        await openItemFromUrl();
+
+        setInterval(
+          refreshStatuses,
+          20000
+        );
       } catch (error) {
         status.textContent = "Feed unavailable";
         feed.textContent = error.message;
@@ -600,6 +975,15 @@
         recentVulnerabilityList.replaceChildren();
       }
     }
+
+    document
+      .querySelector("#close-panel")
+      .addEventListener(
+        "click",
+        closePanel
+      );
+
+    window.addEventListener("popstate", openItemFromUrl);
 
     loadFeed();
   </script>
