@@ -588,7 +588,7 @@
       panelResult.append(section);
     }
 
-    function renderResult(item, storedResult) {
+    function renderResult(item, storedResult, updateUrl = true) {
       const result =
         storedResult?.result || storedResult || {};
 
@@ -659,12 +659,55 @@
       panel.classList.add("open");
       main.classList.add("panel-open");
       openItemId = item.id;
+
+      if (updateUrl) {
+        const url = new URL(location.href);
+        url.searchParams.set("item_id", item.id);
+        history.pushState({ itemId: item.id }, "", url);
+      }
     }
 
-    function closePanel() {
+    function closePanel(updateUrl = true) {
       panel.classList.remove("open");
       main.classList.remove("panel-open");
       openItemId = null;
+
+      if (updateUrl) {
+        const url = new URL(location.href);
+        url.searchParams.delete("item_id");
+        history.pushState({}, "", url);
+      }
+    }
+
+    async function openItemFromUrl() {
+      const itemId = new URL(location.href).searchParams.get("item_id");
+
+      if (!itemId) {
+        closePanel(false);
+        return;
+      }
+
+      const view = views.get(itemId);
+
+      try {
+        const data = await api(itemId);
+
+        if (view) {
+          updateView(itemId, data);
+        }
+
+        if (String(data.status).toUpperCase() === "COMPLETE" && data.result) {
+          renderResult(
+            view?.item || { id: itemId, title: "Research results" },
+            data.result,
+            false
+          );
+        }
+      } catch (error) {
+        if (view) {
+          view.message.textContent = error.message;
+        }
+      }
     }
 
     async function handleResearch(item) {
@@ -818,6 +861,7 @@
           formatDate(data.updated_at);
 
         await refreshStatuses();
+        await openItemFromUrl();
 
         setInterval(
           refreshStatuses,
@@ -835,6 +879,8 @@
         "click",
         closePanel
       );
+
+    window.addEventListener("popstate", openItemFromUrl);
 
     loadFeed();
   </script>
