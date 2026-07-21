@@ -325,6 +325,17 @@
       line-height: 1.4;
     }
 
+    main.panel-open .feed-item.active {
+      margin: 0 -10px;
+      padding: 14px 10px;
+      background: rgba(90, 167, 255, 0.12);
+      border-left: 3px solid var(--accent);
+    }
+
+    main.panel-open .feed-item.active h2 {
+      color: #8fc5ff;
+    }
+
     main.panel-open .actions {
       display: block;
       margin-top: 9px;
@@ -656,6 +667,10 @@
         );
       }
 
+      for (const view of views.values()) {
+        view.article.classList.toggle("active", view.item.id === item.id);
+      }
+
       panel.classList.add("open");
       main.classList.add("panel-open");
       openItemId = item.id;
@@ -671,6 +686,10 @@
       panel.classList.remove("open");
       main.classList.remove("panel-open");
       openItemId = null;
+
+      for (const view of views.values()) {
+        view.article.classList.remove("active");
+      }
 
       if (updateUrl) {
         const url = new URL(location.href);
@@ -807,6 +826,7 @@
 
       views.set(item.id, {
         item,
+        article,
         button,
         message,
         status: "CHECKING",
