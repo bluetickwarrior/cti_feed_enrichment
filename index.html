@@ -72,17 +72,18 @@
 
     main {
       display: grid;
-      grid-template-columns: minmax(0, 900px);
+      grid-template-columns: 220px minmax(0, 900px);
       justify-content: center;
+      gap: 32px;
       width: min(1440px, calc(100% - 40px));
       margin: auto;
       padding: 32px 0 70px;
     }
 
     main.panel-open {
-      grid-template-columns: 210px minmax(0, 1fr);
+      grid-template-columns: 180px 210px minmax(0, 1fr);
       justify-content: stretch;
-      gap: 24px;
+      gap: 20px;
     }
 
     #status {
@@ -91,20 +92,54 @@
       font-size: 12px;
     }
 
-    .feed-group + .feed-group {
-      margin-top: 42px;
+    #vulnerability-index {
+      position: sticky;
+      top: 20px;
+      align-self: start;
+      max-height: calc(100vh - 40px);
+      overflow: auto;
+      padding-right: 4px;
     }
 
-    .feed-group-title {
+    .index-title {
       margin: 0 0 12px;
       color: var(--accent);
-      font-size: 12px;
+      font-size: 11px;
       font-weight: 700;
       letter-spacing: .1em;
       text-transform: uppercase;
     }
 
-    .feed-list {
+    #vulnerability-list {
+      display: grid;
+      border-top: 1px solid var(--line);
+    }
+
+    .vulnerability-link {
+      padding: 11px 0;
+      color: var(--muted);
+      background: none;
+      border: 0;
+      border-bottom: 1px solid var(--line);
+      font-size: 12px;
+      font-weight: 600;
+      line-height: 1.4;
+      text-align: left;
+      cursor: pointer;
+    }
+
+    .vulnerability-link:hover,
+    .vulnerability-link.active {
+      color: #8fc5ff;
+    }
+
+    .vulnerability-link.active {
+      padding-left: 9px;
+      background: rgba(90, 167, 255, .12);
+      border-left: 3px solid var(--accent);
+    }
+
+    #feed {
       border-top: 1px solid var(--line);
     }
 
@@ -322,7 +357,7 @@
       display: none;
     }
 
-    main.panel-open .feed-list {
+    main.panel-open #feed {
       border-top-color: #394451;
     }
 
@@ -382,6 +417,12 @@
         width: calc(100% - 28px);
       }
 
+      #vulnerability-index {
+        position: static;
+        max-height: none;
+        margin-bottom: 28px;
+      }
+
       #research-panel.open {
         position: fixed;
         inset: 0;
@@ -412,18 +453,14 @@
   </header>
 
   <main id="main">
-    <section>
+    <aside id="vulnerability-index">
+      <h2 class="index-title">Vulnerabilities</h2>
+      <div id="vulnerability-list"></div>
+    </aside>
+
+    <section id="feed-column">
       <p id="status">Loading feed…</p>
-
-      <section class="feed-group">
-        <h2 class="feed-group-title">Vulnerabilities</h2>
-        <div id="vulnerability-feed" class="feed-list"></div>
-      </section>
-
-      <section class="feed-group">
-        <h2 class="feed-group-title">Other security reporting</h2>
-        <div id="other-feed" class="feed-list"></div>
-      </section>
+      <div id="feed"></div>
     </section>
 
     <aside id="research-panel">
@@ -444,8 +481,8 @@
       "https://eabcv2ra8b.execute-api.ap-southeast-1.amazonaws.com/research";
 
     const main = document.querySelector("#main");
-    const vulnerabilityFeed = document.querySelector("#vulnerability-feed");
-    const otherFeed = document.querySelector("#other-feed");
+    const feed = document.querySelector("#feed");
+    const vulnerabilityList = document.querySelector("#vulnerability-list");
     const status = document.querySelector("#status");
     const panel = document.querySelector("#research-panel");
     const panelTitle = document.querySelector("#research-title");
@@ -696,7 +733,9 @@
       }
 
       for (const view of views.values()) {
-        view.article.classList.toggle("active", view.item.id === item.id);
+        const active = view.item.id === item.id;
+        view.article.classList.toggle("active", active);
+        view.indexLink?.classList.toggle("active", active);
       }
 
       panel.classList.add("open");
@@ -717,6 +756,7 @@
 
       for (const view of views.values()) {
         view.article.classList.remove("active");
+        view.indexLink?.classList.remove("active");
       }
 
       if (updateUrl) {
@@ -864,6 +904,25 @@
       return article;
     }
 
+    function createVulnerabilityLink(item) {
+      const link = document.createElement("button");
+      const view = views.get(item.id);
+
+      link.className = "vulnerability-link";
+      link.type = "button";
+      link.textContent = item.title || "Untitled article";
+      link.addEventListener("click", () => {
+        if (view.status === "COMPLETE") {
+          handleResearch(item);
+        } else {
+          view.article.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+      });
+
+      view.indexLink = link;
+      return link;
+    }
+
     async function refreshStatuses() {
       for (const [itemId, view] of views) {
         if (
@@ -903,20 +962,14 @@
         const vulnerabilities = items.filter(
           item => item.article_type === "vulnerability"
         );
-        const others = items.filter(
-          item => item.article_type !== "vulnerability"
-        );
 
-        vulnerabilityFeed.replaceChildren(
-          ...vulnerabilities.map(createFeedItem)
-        );
-        otherFeed.replaceChildren(
-          ...others.map(createFeedItem)
+        feed.replaceChildren(...items.map(createFeedItem));
+        vulnerabilityList.replaceChildren(
+          ...vulnerabilities.map(createVulnerabilityLink)
         );
 
         status.textContent =
-          `${vulnerabilities.length} vulnerabilities · ` +
-          `${others.length} other reports · Updated ` +
+          `${items.length} reports · ${vulnerabilities.length} vulnerabilities · Updated ` +
           formatDate(data.updated_at);
 
         await refreshStatuses();
@@ -928,8 +981,8 @@
         );
       } catch (error) {
         status.textContent = "Feed unavailable";
-        vulnerabilityFeed.textContent = error.message;
-        otherFeed.replaceChildren();
+        feed.textContent = error.message;
+        vulnerabilityList.replaceChildren();
       }
     }
 
