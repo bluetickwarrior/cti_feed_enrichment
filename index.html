@@ -528,9 +528,16 @@
       return String(value);
     }
 
+    function encodeTextFragment(value) {
+      return encodeURIComponent(value)
+        .replace(/-/g, "%2D")
+        .replace(/&/g, "%26")
+        .replace(/,/g, "%2C");
+    }
+
     function highlightedSourceUrl(url, quote) {
       if (!quote) return url;
-      return `${url.split("#")[0]}#:~:text=${encodeURIComponent(quote.trim())}`;
+      return `${url.split("#")[0]}#:~:text=${encodeTextFragment(quote.trim())}`;
     }
 
     async function api(itemId, method = "GET") {
